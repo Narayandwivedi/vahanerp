@@ -7,7 +7,7 @@ export default function Logo({ subtitle }) {
         <Truck size={22} />
       </span>
       <span className="min-w-0 text-left">
-        <span className="block text-lg font-bold leading-tight text-slate-900">TransportBook</span>
+        <span className="block text-lg font-bold leading-tight text-slate-900">VahanERP</span>
         {subtitle && <span className="block max-w-[160px] truncate text-[11px] font-medium text-slate-500">{subtitle}</span>}
       </span>
     </span>

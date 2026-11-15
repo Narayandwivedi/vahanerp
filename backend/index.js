@@ -14,15 +14,21 @@ const apiRoutes = require("./routes");
 const app = express();
 const PORT = process.env.PORT || 5050;
 
+const allowedOrigins = [
+  ...(process.env.CLIENT_ORIGINS || "http://localhost:5180,http://localhost:5173").split(",").map((origin) => origin.trim()),
+  "https://vahanerp.in",
+  "https://adm.vahanerp.in",
+];
+
 app.use(cors({
-  origin: (process.env.CLIENT_ORIGINS || "http://localhost:5180,http://localhost:5173").split(",").map((origin) => origin.trim()),
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => res.json({ message: "TransportBook backend is running" }));
+app.get("/", (req, res) => res.json({ message: "VahanERP backend is running" }));
 
 app.use("/api/auth", authRoutes);
 // Uploaded document scans are only shown to a signed-in user
@@ -62,7 +68,7 @@ const start = async () => {
   const diesel = mongoose.connection.collection("dieselentries");
   await diesel.updateMany({ paidAmount: { $exists: false }, mode: "credit" }, { $set: { paidAmount: 0, paymentType: "credit", mode: "cash" } });
   await diesel.updateMany({ paidAmount: { $exists: false } }, [{ $set: { paidAmount: "$amount", paymentType: "full" } }]);
-  app.listen(PORT, () => console.log(`TransportBook backend on http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`VahanERP backend on http://localhost:${PORT}`));
 };
 
 if (require.main === module) {

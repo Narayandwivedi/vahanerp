@@ -10,8 +10,8 @@ const BUTTON = 'flex w-full cursor-pointer items-center justify-center gap-2 rou
 const LINK = 'cursor-pointer text-sm font-semibold text-primary-700 hover:text-primary-900 hover:underline';
 
 const HEADINGS = {
-  login: ['Login to TransportBook', 'Welcome back 👋 Sign in to manage your vehicles and trips.'],
-  register: ['Create your free account', 'Start managing your transport business with TransportBook.'],
+  login: ['Login to VahanERP', 'Welcome back 👋 Sign in to manage your vehicles and trips.'],
+  register: ['Create your free account', 'Start managing your transport business with VahanERP.'],
   staff: ['Staff Login', 'Sign in with the mobile number and password your owner gave you.'],
 };
 
