@@ -15,9 +15,12 @@ const app = express();
 const PORT = process.env.PORT || 5050;
 
 const allowedOrigins = [
-  ...(process.env.CLIENT_ORIGINS || "http://localhost:5180,http://localhost:5173").split(",").map((origin) => origin.trim()),
+  "http://localhost:5180",
+  "http://localhost:5173",
   "https://vahanerp.in",
+  "https://www.vahanerp.in",
   "https://adm.vahanerp.in",
+  "https://api.vahanerp.in",
 ];
 
 app.use(cors({
