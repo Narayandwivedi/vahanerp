@@ -9,7 +9,7 @@ import { QUOTE_BASIS_OPTIONS, calcAmount, getBasisLabel, getBasisUnit } from '..
 import { addDays, amountInWords, formatDate, formatNumber, formatRupees, idOf, toDayInput, todayInput } from '../utils/format';
 import { QUOTE_STATUS, quoteTotals } from '../utils/quotation';
 import FormSection from '../components/FormSection';
-import { PartySelect } from '../components/Pickers';
+import { OptionSelect, PartySelect } from '../components/Pickers';
 import { Field, Loading, MoneyInput, Page, PageHeader } from '../components/ui';
 
 const EMPTY_ITEM = { description: 'Transportation charges', from: '', to: '', vehicleType: '', basis: 'per_trip', quantity: 1, rate: '' };
@@ -195,9 +195,7 @@ export default function QuotationEditor() {
     <Page>
       <div className="no-print">
         <PageHeader title={quoteNo ? `Quotation ${quoteNo}` : 'New Quotation'} subtitle="Fill the left side; the sheet on the right is what prints">
-          <select className="input w-auto" value={quote.status} onChange={(event) => set('status', event.target.value)}>
-            {Object.entries(QUOTE_STATUS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
-          </select>
+          <OptionSelect options={Object.entries(QUOTE_STATUS).map(([key, value]) => ({ value: key, label: value.label }))} value={quote.status} onChange={(value) => set('status', value)} ariaLabel="Quotation status" triggerClassName="w-auto" />
           <button type="button" className="btn-secondary" onClick={shareOnWhatsApp}><MessageCircle size={16} /> WhatsApp</button>
           <button type="button" className="btn-secondary" onClick={async () => { if (await save()) setTimeout(() => window.print(), 300); }} disabled={saving}><Printer size={16} /> Save & Print</button>
           <button type="button" className="btn-primary" onClick={() => save()} disabled={saving}><Save size={16} /> Save</button>
@@ -244,9 +242,7 @@ export default function QuotationEditor() {
                   <input className="input col-span-2 md:col-span-1" value={item.vehicleType} onChange={(event) => setItem(index, 'vehicleType', event.target.value)} placeholder="Vehicle (e.g. 10 wheel, 25 T)" />
                 </div>
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                  <select className="input" value={item.basis} onChange={(event) => setItem(index, 'basis', event.target.value)}>
-                    {QUOTE_BASIS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
+                  <OptionSelect options={QUOTE_BASIS_OPTIONS} value={item.basis} onChange={(value) => setItem(index, 'basis', value)} ariaLabel="Charged" />
                   {item.basis !== 'fixed' ? (
                     <MoneyInput prefix="" suffix={getBasisUnit(item.basis)} value={item.quantity} onChange={(value) => setItem(index, 'quantity', value)} />
                   ) : <span />}
@@ -258,12 +254,12 @@ export default function QuotationEditor() {
             <div className="grid grid-cols-2 gap-3">
               <Field label="Discount"><MoneyInput value={quote.discount} onChange={(value) => set('discount', value)} /></Field>
               <Field label="GST">
-                <select className="input" value={quote.gstPercent} onChange={(event) => set('gstPercent', Number(event.target.value))}>
-                  <option value={0}>No GST</option>
-                  <option value={5}>5% (GTA, no ITC)</option>
-                  <option value={12}>12% (GTA, with ITC)</option>
-                  <option value={18}>18%</option>
-                </select>
+                {/* Values as text so 0 (No GST) shows as picked */}
+                <OptionSelect
+                  options={[{ value: '0', label: 'No GST' }, { value: '5', label: '5% (GTA, no ITC)' }, { value: '12', label: '12% (GTA, with ITC)' }, { value: '18', label: '18%' }]}
+                  value={String(quote.gstPercent ?? 0)}
+                  onChange={(value) => set('gstPercent', Number(value))}
+                />
               </Field>
             </div>
           </FormSection>

@@ -8,7 +8,7 @@ import FormSection, { AddLink, FieldGrid } from './FormSection';
 import Segmented from './Segmented';
 import PartyPopup from './PartyPopup';
 import VehiclePopup from './VehiclePopup';
-import { PartySelect, VehicleSelect } from './Pickers';
+import { OptionSelect, PartySelect, VehicleSelect } from './Pickers';
 import { Field, MoneyInput } from './ui';
 
 const DIRECTIONS = {
@@ -102,16 +102,10 @@ export default function ContractPopup({ contract = null, direction = 'hire_in', 
           </div>
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <Field label="Diesel Paid By">
-              <select className="input" value={form.dieselBy} onChange={(event) => set('dieselBy', event.target.value)}>
-                <option value="hirer">Hirer (whoever takes the vehicle)</option>
-                <option value="owner">Owner</option>
-              </select>
+              <OptionSelect options={[{ value: 'hirer', label: 'Hirer (whoever takes the vehicle)' }, { value: 'owner', label: 'Owner' }]} value={form.dieselBy} onChange={(value) => set('dieselBy', value)} />
             </Field>
             <Field label="Driver By">
-              <select className="input" value={form.driverBy} onChange={(event) => set('driverBy', event.target.value)}>
-                <option value="owner">Owner</option>
-                <option value="hirer">Hirer</option>
-              </select>
+              <OptionSelect options={[{ value: 'owner', label: 'Owner' }, { value: 'hirer', label: 'Hirer' }]} value={form.driverBy} onChange={(value) => set('driverBy', value)} />
             </Field>
           </div>
           <Field label="Notes" htmlFor="ct-notes">

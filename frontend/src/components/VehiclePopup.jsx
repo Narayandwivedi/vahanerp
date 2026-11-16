@@ -9,7 +9,7 @@ import FormPopup from './FormPopup';
 import FormSection, { AddLink } from './FormSection';
 import PartyPopup from './PartyPopup';
 import RouteRateFields from './RouteRateFields';
-import { PartySelect } from './Pickers';
+import { OptionSelect, PartySelect } from './Pickers';
 import { Field, MoneyInput } from './ui';
 
 const METER_UNITS = [
@@ -85,14 +85,11 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
               <input id="veh-no" className="input font-mono uppercase" value={form.vehicleNo} onChange={(event) => set('vehicleNo', event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))} maxLength={10} placeholder="CG04AB1234" required autoFocus />
             </Field>
             <Field label="Type" htmlFor="veh-cat">
-              <select id="veh-cat" className="input" value={form.category} onChange={(event) => {
-                const category = event.target.value;
+              <OptionSelect id="veh-cat" options={VEHICLE_CATEGORY_OPTIONS} value={form.category} onChange={(category) => {
                 set('category', category);
                 // JCB, tractor and crane are machinery; picking another type on a new entry makes it a vehicle again
                 if (!vehicle || MACHINERY_CATEGORIES.includes(category)) setMachinery(MACHINERY_CATEGORIES.includes(category));
-              }}>
-                {VEHICLE_CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
+              }} />
             </Field>
           </div>
           {/* Vehicle runs A → B; machinery works at one site, so its trips ask one location */}
@@ -113,14 +110,10 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
           </Field>
           <div className={`grid grid-cols-2 gap-3 md:gap-4 ${vehicle ? '' : 'md:grid-cols-3'}`}>
             <Field label="Vehicle Is" required htmlFor="veh-own" hint={OWNERSHIP.find((option) => option.value === form.ownership)?.hint}>
-              <select id="veh-own" className="input" value={form.ownership} onChange={(event) => set('ownership', event.target.value)}>
-                {OWNERSHIP.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
+              <OptionSelect id="veh-own" options={OWNERSHIP} value={form.ownership} onChange={(value) => set('ownership', value)} />
             </Field>
             <Field label="Meter Reading In" required htmlFor="veh-meter" hint={METER_UNITS.find((option) => option.value === unit)?.hint}>
-              <select id="veh-meter" className="input" value={unit} onChange={(event) => set('meterUnit', event.target.value)}>
-                {METER_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
+              <OptionSelect id="veh-meter" options={METER_UNITS} value={unit} onChange={(value) => set('meterUnit', value)} />
             </Field>
             {/* Where the meter stands today; saved as the vehicle's first meter reading */}
             {!vehicle && (
@@ -139,10 +132,7 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
                 <PartySelect parties={parties} value={form.ownerPartyId} onChange={(value) => set('ownerPartyId', value)} prefer={['supplier']} required />
               </Field>
               <Field label="Pay Owner">
-                <select className="input" value={form.hireBasis} onChange={(event) => set('hireBasis', event.target.value)}>
-                  <option value="">Monthly / no fixed rate</option>
-                  {hireOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                </select>
+                <OptionSelect options={hireOptions} value={form.hireBasis} onChange={(value) => set('hireBasis', value)} allowEmpty emptyLabel="Monthly / no fixed rate" />
               </Field>
               {form.hireBasis && (
                 <Field label="Rate">
@@ -178,11 +168,7 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
             </Field>
             {vehicle && (
               <Field label="Status">
-                <select className="input" value={form.status} onChange={(event) => set('status', event.target.value)}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="sold">Sold / Returned</option>
-                </select>
+                <OptionSelect options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }, { value: 'sold', label: 'Sold / Returned' }]} value={form.status} onChange={(value) => set('status', value)} />
               </Field>
             )}
           </div>

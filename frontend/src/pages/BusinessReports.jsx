@@ -8,7 +8,7 @@ import useFetch from '../utils/useFetch';
 import { currentMonthInput, formatDate, formatMonth, formatNumber, formatRupees, monthBounds, todayInput, toNumber } from '../utils/format';
 import { PAYMENT_MODE_OPTIONS, getPartyTypeLabel } from '../utils/constants';
 import StatCard from '../components/StatCard';
-import { VehicleSelect } from '../components/Pickers';
+import { OptionSelect, VehicleSelect } from '../components/Pickers';
 import MonthFilter from '../components/MonthFilter';
 import Segmented from '../components/Segmented';
 import { EmptyState, ErrorBox, Loading, Page, PageHeader, PanelHeader } from '../components/ui';
@@ -854,10 +854,7 @@ function PaymentReport({ period }) {
         actions={(
           <>
             <Segmented value={type} onChange={setType} options={PAYMENT_TYPES} />
-            <select className="input h-9 min-h-0 w-auto py-0 text-xs md:text-sm" value={mode} onChange={(event) => setMode(event.target.value)} aria-label="Payment mode">
-              <option value="">All modes</option>
-              {PAYMENT_MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
+            <OptionSelect options={PAYMENT_MODE_OPTIONS} value={mode} onChange={setMode} allowEmpty emptyLabel="All modes" ariaLabel="Payment mode" triggerClassName="h-9 min-h-0 w-auto py-0 text-xs md:text-sm" menuAlign="right" />
           </>
         )}
       >

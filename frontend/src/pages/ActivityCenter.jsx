@@ -14,6 +14,7 @@ import PaymentPopup from '../components/PaymentPopup';
 import ExpensePopup from '../components/ExpensePopup';
 import { ReadingPopup } from './MeterReadings';
 import { EmptyState, ErrorBox, Loading, Page, PageHeader } from '../components/ui';
+import { OptionSelect } from '../components/Pickers';
 
 const PERIODS = [
   { days: 1, label: 'Today' },
@@ -427,11 +428,16 @@ function AllEntries() {
       <div className="panel-header flex flex-wrap items-center justify-between gap-2 py-2.5">
         <h2 className="text-sm font-bold text-slate-800">All Entries <span className="ml-1 text-slate-400">{data?.rows?.length || 0}</span></h2>
         <div className="flex flex-wrap items-center gap-2">
-          <select className="input h-9 min-h-0 w-auto py-0 text-xs md:text-sm" value={by} onChange={(event) => setBy(event.target.value)} aria-label="Added by">
-            <option value="">Everyone</option>
-            <option value="owner">Owner</option>
-            {(data?.staff || []).map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
-          </select>
+          <OptionSelect
+            options={[{ value: 'owner', label: 'Owner' }, ...(data?.staff || []).map((person) => ({ value: person.id, label: person.name }))]}
+            value={by}
+            onChange={setBy}
+            allowEmpty
+            emptyLabel="Everyone"
+            ariaLabel="Added by"
+            triggerClassName="h-9 min-h-0 w-auto py-0 text-xs md:text-sm"
+            menuAlign="right"
+          />
           <DayChips value={days} onChange={setDays} />
           <button type="button" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" onClick={reload} aria-label="Refresh" title="Refresh">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />

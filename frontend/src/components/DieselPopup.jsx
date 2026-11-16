@@ -150,10 +150,10 @@ export default function DieselPopup({ entry = null, preset = {}, onClose, onSave
               <input id="dsl-date" type="date" className="input" value={form.date} onChange={(event) => set('date', event.target.value)} required />
             </Field>
             <Field label="Vehicle" required actionNextToLabel action={!isStaff && <AddLink onClick={() => setAddingVehicle(true)}>Add Vehicle</AddLink>} hint={vehicle?.currentKm ? `Meter now: ${formatMeter(vehicle.currentKm, vehicle)}` : ''}>
-              <VehicleSelect vehicles={vehicles} value={form.vehicleId} onChange={pickVehicle} required hideSearch coverField />
+              <VehicleSelect vehicles={vehicles} value={form.vehicleId} onChange={pickVehicle} required coverField />
             </Field>
             <Field label="Diesel From" hint="Cash, a petrol pump, or any party who gave you diesel" actionNextToLabel action={<AddLink onClick={() => setAddingPump(true)}>New Pump</AddLink>}>
-              <PartySelect parties={parties} value={form.partyId} onChange={(value) => set('partyId', value)} prefer={['supplier']} allowEmpty emptyLabel="Cash" hideSearch coverField />
+              <PartySelect parties={parties} value={form.partyId} onChange={(value) => set('partyId', value)} prefer={['supplier']} allowEmpty emptyLabel="Cash" coverField />
             </Field>
             <Field label="Pump Bill / Slip No." htmlFor="dsl-bill">
               <input id="dsl-bill" className="input" value={form.billNo} onChange={(event) => set('billNo', event.target.value)} placeholder="Optional" />

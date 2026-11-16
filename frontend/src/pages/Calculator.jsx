@@ -5,6 +5,7 @@ import useMasters from '../utils/useMasters';
 import { formatNumber, formatRupees, round2, toNumber } from '../utils/format';
 import StatCard from '../components/StatCard';
 import FormSection from '../components/FormSection';
+import { VehicleSelect } from '../components/Pickers';
 import { Field, MoneyInput, Page, PageHeader } from '../components/ui';
 
 const STORE_KEY = 'transport-calculator';
@@ -113,10 +114,9 @@ export default function Calculator() {
                 Count the empty return (round trip)
               </label>
               {vehicles.length > 0 && (
-                <select className="input w-auto" defaultValue="" onChange={(event) => pickVehicleLoad(event.target.value)}>
-                  <option value="" disabled>Fill load from vehicle…</option>
-                  {vehicles.map((vehicle) => <option key={vehicle._id} value={vehicle._id}>{vehicle.vehicleNo}{vehicle.capacityTons ? ` · ${vehicle.capacityTons} t` : ''}</option>)}
-                </select>
+                <div className="w-64">
+                  <VehicleSelect vehicles={vehicles} value="" onChange={(value) => value && pickVehicleLoad(value)} emptyLabel="Fill load from vehicle…" />
+                </div>
               )}
             </div>
           </FormSection>

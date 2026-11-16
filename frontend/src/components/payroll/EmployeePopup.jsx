@@ -6,7 +6,7 @@ import { idOf, toDayInput, todayInput } from '../../utils/format';
 import { ROLE_OPTIONS, SALARY_TYPES } from '../../utils/payroll';
 import FormPopup from '../FormPopup';
 import FormSection from '../FormSection';
-import { VehicleSelect } from '../Pickers';
+import { OptionSelect, VehicleSelect } from '../Pickers';
 import { Field, MoneyInput } from '../ui';
 
 const EMPTY = {
@@ -62,9 +62,7 @@ export default function EmployeePopup({ employee = null, defaultRole = 'driver',
             <input id="emp-mobile" className="input" value={form.mobile} onChange={(event) => set('mobile', event.target.value)} inputMode="tel" />
           </Field>
           <Field label="Work" className="col-span-2 md:col-span-1">
-            <select className="input" value={form.role} onChange={(event) => set('role', event.target.value)}>
-              {ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
+            <OptionSelect options={ROLE_OPTIONS} value={form.role} onChange={(value) => set('role', value)} />
           </Field>
         </div>
         <Field label="Works On Vehicle" hint="Salary, advance and bata are booked to this vehicle's expenses. A driver also shows as the vehicle's driver.">
@@ -96,10 +94,9 @@ export default function EmployeePopup({ employee = null, defaultRole = 'driver',
           <Field label="Opening Balance" hint="From before this software" className="col-span-2 md:col-span-1">
             <div className="flex gap-2">
               <MoneyInput value={form.openingBalance} onChange={(value) => set('openingBalance', value)} />
-              <select className="input w-32 shrink-0" value={form.balanceSide} onChange={(event) => set('balanceSide', event.target.value)}>
-                <option value="owed">I owe</option>
-                <option value="advance">Advance</option>
-              </select>
+              <div className="w-32 shrink-0">
+                <OptionSelect options={[{ value: 'owed', label: 'I owe' }, { value: 'advance', label: 'Advance' }]} value={form.balanceSide} onChange={(value) => set('balanceSide', value)} ariaLabel="Balance is" />
+              </div>
             </div>
           </Field>
         </div>

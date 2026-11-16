@@ -10,7 +10,7 @@ import { meterUnitOf } from '../utils/meter';
 import FormPopup from './FormPopup';
 import ExpenseTypePopup from './ExpenseTypePopup';
 import FormSection, { AddLink, FieldGrid } from './FormSection';
-import { VehicleSelect } from './Pickers';
+import { OptionSelect, VehicleSelect } from './Pickers';
 import { Field, MoneyInput } from './ui';
 
 const QUICK = ['Diesel', 'Tyre', 'Repair & Maintenance', 'Driver Salary', 'Toll', 'Insurance', 'Road Tax', 'EMI'];
@@ -113,12 +113,11 @@ export default function ExpensePopup({ expense = null, preset = {}, onClose, onS
       <FormSection number={3} title="Payment" tone="slate">
         <FieldGrid cols={2}>
           <Field label="Paid By">
-            <select className="input" value={form.mode} onChange={(event) => set('mode', event.target.value)}>
-              <option value="cash">Cash</option>
-              <option value="bank">Bank</option>
-              <option value="upi">UPI</option>
-              <option value="credit">Credit (pay later)</option>
-            </select>
+            <OptionSelect
+              options={[{ value: 'cash', label: 'Cash' }, { value: 'bank', label: 'Bank' }, { value: 'upi', label: 'UPI' }, { value: 'credit', label: 'Credit (pay later)' }]}
+              value={form.mode}
+              onChange={(value) => set('mode', value)}
+            />
           </Field>
           <Field label="Paid To" htmlFor="exp-paidto">
             <input id="exp-paidto" className="input" value={form.paidTo} onChange={(event) => set('paidTo', event.target.value)} placeholder="Pump, garage, driver…" />

@@ -488,13 +488,13 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
               <input id="trip-date" type="date" className="input" value={form.date} onChange={(event) => set('date', event.target.value)} required />
             </Field>
             <Field label="Vehicle" required actionNextToLabel action={!isStaff && <AddLink onClick={() => setAddingVehicle(true)}>New Vehicle</AddLink>}>
-              <VehicleSelect vehicles={vehicles} value={form.vehicleId} onChange={(value) => pickVehicle(value)} required openSignal={vehicleSignal} hideSearch coverField />
+              <VehicleSelect vehicles={vehicles} value={form.vehicleId} onChange={(value) => pickVehicle(value)} required openSignal={vehicleSignal} coverField />
             </Field>
             <Field label="Driver" htmlFor="trip-driver" action={!isStaff && <AddLink onClick={() => setAddingDriver(true)}>New Driver</AddLink>}>
-              <DriverSelect id="trip-driver" drivers={driverOptions} value={form.driverId} onChange={pickDriver} emptyLabel="No driver" openSignal={driverSignal} hideSearch coverField />
+              <DriverSelect id="trip-driver" drivers={driverOptions} value={form.driverId} onChange={pickDriver} emptyLabel="No driver" openSignal={driverSignal} coverField />
             </Field>
             <Field label="Bill To" required action={<AddLink onClick={() => setAddingParty('partyId')}>New Party</AddLink>}>
-              <PartySelect parties={parties} value={form.partyId} onChange={(value) => set('partyId', value)} prefer={['customer']} required openSignal={billToSignal} hideSearch coverField />
+              <PartySelect parties={parties} value={form.partyId} onChange={(value) => set('partyId', value)} prefer={['customer']} required openSignal={billToSignal} coverField />
             </Field>
           </FieldGrid>
         </FormSection>
@@ -597,7 +597,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
                   <OptionSelect id="trip-material" options={materialOptions.map((name) => ({ value: name, label: name }))} value={form.material} onChange={(value) => set('material', value)} emptyLabel="Select material" required coverField />
                 </Field>
                 {!hideMoney && <Field label="Bought From" hint="The party you bought it from, or Cash" actionNextToLabel action={<AddLink onClick={() => setAddingParty('materialSupplierId')}>Add Party</AddLink>}>
-                  <PartySelect parties={parties} value={form.materialSupplierId} onChange={(value) => set('materialSupplierId', value)} prefer={['supplier']} allowEmpty emptyLabel="Cash" hideSearch coverField />
+                  <PartySelect parties={parties} value={form.materialSupplierId} onChange={(value) => set('materialSupplierId', value)} prefer={['supplier']} allowEmpty emptyLabel="Cash" coverField />
                 </Field>}
               </div>
 
@@ -846,7 +846,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
             <Field label="Vehicle Number" required hint={form.vehicleId ? "This trip's vehicle (change it in Trip Details)" : 'Also becomes this trip’s vehicle'}>
               {form.vehicleId
                 ? <div className="input flex items-center bg-slate-50 font-mono font-semibold text-slate-900">{vehicle?.vehicleNo || '—'}</div>
-                : <VehicleSelect vehicles={vehicles} value={puncture.vehicleId} onChange={(value) => setPuncture((prev) => ({ ...prev, vehicleId: value }))} required hideSearch coverField />}
+                : <VehicleSelect vehicles={vehicles} value={puncture.vehicleId} onChange={(value) => setPuncture((prev) => ({ ...prev, vehicleId: value }))} required coverField />}
             </Field>
             <Field label="Trip" hint="The puncture is saved with this trip">
               <div className="input flex items-center gap-2 bg-slate-50 text-slate-900">

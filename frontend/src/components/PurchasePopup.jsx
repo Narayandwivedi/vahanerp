@@ -9,7 +9,7 @@ import FormPopup from './FormPopup';
 import FormSection, { AddLink, FieldGrid } from './FormSection';
 import PartyPopup from './PartyPopup';
 import { ItemPopup } from './InventoryPopups';
-import { PartySelect } from './Pickers';
+import { OptionSelect, PartySelect, SearchableSelect } from './Pickers';
 import { Field, MoneyInput } from './ui';
 
 const EMPTY_LINE = { itemId: '', quantity: '', rate: '' };
@@ -134,16 +134,17 @@ export default function PurchasePopup({ purchase = null, items, preset = {}, onC
               return (
                 <div key={index} className="grid grid-cols-2 gap-2 rounded-lg bg-white/70 p-2 ring-1 ring-emerald-200 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-center md:bg-transparent md:p-0 md:ring-0">
                   <div className="col-span-2 md:col-span-1">
-                    <select
-                      className="input"
-                      aria-label="Stock item"
+                    <SearchableSelect
+                      ariaLabel="Stock item"
+                      items={[
+                        ...items.map((row) => ({ value: row._id, label: row.name, tags: row.unit ? `${row.stockQty ?? 0} ${row.unit}` : '' })),
+                        { value: '__new', label: '+ Add new stock item…', search: 'new add' },
+                      ]}
                       value={line.itemId}
-                      onChange={(event) => (event.target.value === '__new' ? setAddingItemFor(index) : pickItem(index, event.target.value))}
-                    >
-                      <option value="">Select item</option>
-                      {items.map((row) => <option key={row._id} value={row._id}>{row.name}</option>)}
-                      <option value="__new">+ Add new stock item…</option>
-                    </select>
+                      onChange={(value) => (value === '__new' ? setAddingItemFor(index) : pickItem(index, value))}
+                      emptyLabel="Select item"
+                      searchPlaceholder="Type item name…"
+                    />
                     {item && <p className="mt-0.5 px-1 text-[11px] text-slate-500">In stock {formatNumber(item.stockQty)} {item.unit}</p>}
                   </div>
                   <MoneyInput prefix="" suffix={item?.unit || ''} aria-label="Quantity" placeholder="Qty" value={line.quantity} onChange={(value) => setLine(index, 'quantity', value)} />
@@ -177,9 +178,7 @@ export default function PurchasePopup({ purchase = null, items, preset = {}, onC
               />
             </Field>
             <Field label="Paid By">
-              <select className="input" value={form.mode} onChange={(event) => set('mode', event.target.value)} disabled={paid <= 0}>
-                {PAYMENT_MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
+              <OptionSelect options={PAYMENT_MODE_OPTIONS} value={form.mode} onChange={(value) => set('mode', value)} disabled={paid <= 0} />
             </Field>
           </FieldGrid>
         </FormSection>

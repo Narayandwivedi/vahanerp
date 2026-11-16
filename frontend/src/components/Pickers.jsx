@@ -64,9 +64,21 @@ function SearchSelect({
     setActive(index >= 0 ? index : noDefaultPick ? -1 : 0);
     // No search box: the cursor stays on the field, which takes the keys
     if (hideSearch) triggerRef.current?.focus();
-    else searchRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // With a search box, the cursor goes into it once the list is on screen (a hidden box cannot take it),
+  // so typing starts searching at once, even when the list opens by itself as a popup opens
+  const placed = Boolean(menuPos);
+  useEffect(() => {
+    if (!open || hideSearch || !placed) return undefined;
+    searchRef.current?.focus({ preventScroll: true });
+    // Once more after the popup around it has settled, in case something else took the cursor meanwhile
+    const timer = setTimeout(() => {
+      if (document.activeElement !== searchRef.current) searchRef.current?.focus({ preventScroll: true });
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [open, hideSearch, placed]);
 
   // Opened from outside: on the popup opening, or as the next field after another pick
   useEffect(() => {
@@ -97,7 +109,9 @@ function SearchSelect({
       const start = coverField ? rect.top : rect.bottom + 4;
       const below = window.innerHeight - start - margin;
       const above = (coverField ? rect.bottom : rect.top - 4) - margin;
-      const wanted = Math.min(menuRef.current?.scrollHeight || 300, 320);
+      // At most this tall; a longer list scrolls inside it
+      const tallest = 360;
+      const wanted = Math.min(menuRef.current?.scrollHeight || 300, tallest);
       const up = below < wanted && above > below;
       const width = Math.max(rect.width, 224);
       let left = menuAlign === 'right' ? rect.right - width : rect.left;
@@ -105,16 +119,20 @@ function SearchSelect({
       setMenuPos({
         left,
         width,
-        maxHeight: Math.max(120, up ? above : below),
+        maxHeight: Math.min(tallest, Math.max(120, up ? above : below)),
         ...(up ? { bottom: window.innerHeight - (coverField ? rect.bottom : rect.top - 4) } : { top: start }),
       });
     };
     place();
+    // Scrolling the page or popup moves the list with its field; scrolling the list itself changes nothing
+    const onScroll = (event) => {
+      if (!menuRef.current?.contains(event.target)) place();
+    };
     window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, true);
+    window.addEventListener('scroll', onScroll, true);
     return () => {
       window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('scroll', onScroll, true);
     };
   }, [open, coverField, menuAlign]);
 
@@ -124,12 +142,13 @@ function SearchSelect({
   }, [active, open]);
 
   const onSearchKey = (event) => {
+    // Arrows move through the list and wrap from the last row to the first (and back)
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActive((index) => Math.min(options.length - 1, index + 1));
+      if (options.length) setActive((index) => (index + 1) % options.length);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setActive((index) => Math.max(0, index - 1));
+      if (options.length) setActive((index) => (index <= 0 ? options.length - 1 : index - 1));
     } else if (event.key === 'Enter') {
       // Enter picks the highlighted row instead of submitting the form; in an Enter-to-next form it then moves on
       event.preventDefault();
@@ -235,10 +254,10 @@ function SearchSelect({
         >
           {!hideSearch && (
             <div className="relative border-b border-slate-100 p-2">
-              <Search size={14} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={16} className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 ref={searchRef}
-                className="w-full rounded-md bg-slate-50 py-1.5 pl-7 pr-2 text-sm text-slate-800 outline-none ring-1 ring-slate-200 placeholder:text-slate-400 focus:ring-primary-500"
+                className={`w-full rounded-md bg-white py-2 pl-9 pr-16 text-sm text-slate-800 outline-none ring-1 ring-primary-300 placeholder:text-slate-400 focus:ring-2 focus:ring-primary-500 ${mono ? 'font-mono uppercase placeholder:font-sans placeholder:normal-case' : ''}`}
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value);
@@ -247,10 +266,15 @@ function SearchSelect({
                 onKeyDown={onSearchKey}
                 placeholder={searchPlaceholder}
                 autoComplete="off"
+                spellCheck={false}
               />
+              {/* How many of the list match what is typed */}
+              <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-400">
+                {options.filter((option) => !option.empty).length}/{items.length}
+              </span>
             </div>
           )}
-          <ul ref={listRef} role="listbox" className="min-h-0 flex-1 overflow-y-auto py-1">
+          <ul ref={listRef} role="listbox" className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
             {options.length === 0 && <li className="px-3 py-3 text-center text-sm text-slate-500">{query ? <>Nothing matches &ldquo;{query}&rdquo;</> : 'Nothing to pick yet'}</li>}
             {options.map((option, index) => {
               const isPicked = option.value === (value || '');
@@ -262,10 +286,18 @@ function SearchSelect({
                   onMouseEnter={() => setActive(index)}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => pick(option.value)}
-                  className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm ${index === active ? 'bg-primary-50' : ''}`}
+                  className={`flex cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors ${index === active ? 'bg-primary-50 ring-1 ring-inset ring-primary-200' : ''}`}
                 >
                   {option.empty ? (
                     <span className="text-slate-600">{option.label}</span>
+                  ) : mono ? (
+                    // Vehicles: the number, then its type / hired / sold as small tags
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className={`truncate tracking-wide ${labelClass}`}>{option.label}</span>
+                      {String(option.tags || '').split(' · ').filter(Boolean).map((tag) => (
+                        <span key={tag} className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${tag === 'Hired' ? 'bg-amber-50 text-amber-700' : tag === 'Sold' ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{tag}</span>
+                      ))}
+                    </span>
                   ) : (
                     <span className="flex min-w-0 items-baseline gap-1.5">
                       <span className={`truncate ${labelClass}`}>{option.label}</span>
@@ -277,6 +309,11 @@ function SearchSelect({
               );
             })}
           </ul>
+          {!hideSearch && (
+            <p className="hidden border-t border-slate-100 px-3 py-1.5 text-[11px] text-slate-400 sm:block">
+              <kbd className="font-sans font-semibold">↑ ↓</kbd> move · <kbd className="font-sans font-semibold">Enter</kbd> pick · <kbd className="font-sans font-semibold">Esc</kbd> close
+            </p>
+          )}
         </div>,
         document.body,
       )}
@@ -304,7 +341,7 @@ export function VehicleSelect({ vehicles, value, onChange, allowEmpty = false, e
       emptyLabel={emptyLabel}
       id={id}
       required={required}
-      searchPlaceholder="Search vehicle no."
+      searchPlaceholder="Type vehicle number…"
       mono
       openSignal={openSignal}
       hideSearch={hideSearch}
@@ -367,15 +404,28 @@ export function DriverSelect({ drivers, value, onChange, allowEmpty = true, empt
   );
 }
 
+// A fixed list longer than this opens with a search box too
+const SEARCH_FROM = 8;
+
 /**
- * A fixed list (charge type, payment mode, status…) in the same dropdown style as the pickers above,
- * with no search box: options [{ value, label, tags? }] (tags: small grey text after the label). allowEmpty: emptyLabel
+ * A list of records (stock items, employees…) in the same dropdown as the pickers above, with its search box:
+ * items [{ value, label, tags?, search? }].
+ */
+export function SearchableSelect({ items, emptyLabel = 'Select', searchPlaceholder = 'Type to search…', ...rest }) {
+  return <SearchSelect items={items} emptyLabel={emptyLabel} searchPlaceholder={searchPlaceholder} {...rest} />;
+}
+
+/**
+ * A fixed list (charge type, payment mode, status…) in the same dropdown style as the pickers above:
+ * options [{ value, label, tags? }] (tags: small grey text after the label). allowEmpty: emptyLabel
  * is a choice of its own (value ''); otherwise it is only shown until something is picked.
+ * A short list has no search box (typing jumps to a match); a long one gets one, like the pickers.
  */
 export function OptionSelect({
   options, value, onChange, allowEmpty = false, emptyLabel = 'Select', id, required = false, openSignal = 0, triggerClassName = '', ariaLabel, menuAlign, coverField = false,
   disabled = false, enterSubmit = false,
 }) {
+  const searchable = options.length >= SEARCH_FROM;
   return (
     <SearchSelect
       items={options}
@@ -389,8 +439,8 @@ export function OptionSelect({
       id={id}
       required={required}
       openSignal={openSignal}
-      hideSearch
-      noDefaultPick
+      hideSearch={!searchable}
+      noDefaultPick={!searchable}
       triggerClassName={triggerClassName}
       ariaLabel={ariaLabel}
       menuAlign={menuAlign}

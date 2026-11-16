@@ -1,4 +1,5 @@
 import { ArrowRight, Plus, Trash2 } from 'lucide-react';
+import { OptionSelect } from './Pickers';
 
 const ROUTE_BASIS_OPTIONS = [
   { value: 'per_trip', label: 'Per Trip', unit: 'trip' },
@@ -76,9 +77,12 @@ export default function RouteRateFields({ routes, isHired, onChange }) {
                 </button>
               </div>
               <div className={`grid grid-cols-2 gap-2 ${isHired ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
-                <select className="input" value={basis} onChange={(event) => updateRow(index, 'basis', event.target.value)} aria-label="Charge party">
-                  {ROUTE_BASIS_OPTIONS.map((option) => <option key={option.value} value={option.value}>Charge {option.label}</option>)}
-                </select>
+                <OptionSelect
+                  options={ROUTE_BASIS_OPTIONS.map((option) => ({ value: option.value, label: `Charge ${option.label}` }))}
+                  value={basis}
+                  onChange={(value) => updateRow(index, 'basis', value)}
+                  ariaLabel="Charge party"
+                />
                 <RateInput value={row.rate} onChange={(value) => updateRow(index, 'rate', value)} unit={unit} placeholder="Party rate" label="Party rate" />
                 {isHired && <RateInput value={row.hireRate} onChange={(value) => updateRow(index, 'hireRate', value)} unit={unit} placeholder="Owner rate" label="Pay owner rate" />}
                 <div className="relative">

@@ -7,7 +7,7 @@ import { formatNumber, formatRupees, idOf, toDayInput, todayInput, toNumber } fr
 import { meterUnitOf } from '../utils/meter';
 import FormPopup from './FormPopup';
 import FormSection, { FieldGrid } from './FormSection';
-import { PartySelect, VehicleSelect } from './Pickers';
+import { OptionSelect, PartySelect, SearchableSelect, VehicleSelect } from './Pickers';
 import { Field, MoneyInput } from './ui';
 
 export function ItemPopup({ item = null, onClose, onSaved }) {
@@ -42,16 +42,14 @@ export function ItemPopup({ item = null, onClose, onSaved }) {
       </Field>
       <FieldGrid cols={2}>
         <Field label="Category">
-          <select
-            className="input"
+          <OptionSelect
+            options={INVENTORY_CATEGORY_OPTIONS}
             value={form.category}
-            onChange={(event) => {
-              const option = INVENTORY_CATEGORY_OPTIONS.find((row) => row.value === event.target.value);
+            onChange={(value) => {
+              const option = INVENTORY_CATEGORY_OPTIONS.find((row) => row.value === value);
               setForm((prev) => ({ ...prev, category: option.value, unit: item ? prev.unit : option.unit }));
             }}
-          >
-            {INVENTORY_CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          />
         </Field>
         <Field label="Unit" htmlFor="item-unit">
           <input id="item-unit" className="input" value={form.unit} onChange={(event) => set('unit', event.target.value)} placeholder="pcs, ltr" />
@@ -139,10 +137,14 @@ export function TxnPopup({ txn = null, items, preset = {}, onClose, onSaved }) {
             <input id="txn-date" type="date" className="input" value={form.date} onChange={(event) => set('date', event.target.value)} required />
           </Field>
           <Field label="Item" required hint={item ? `In stock: ${formatNumber(item.stockQty)} ${item.unit} · avg ${formatRupees(item.avgRate)}` : ''}>
-            <select className="input" value={form.itemId} onChange={(event) => set('itemId', event.target.value)} required>
-              <option value="" disabled>Select item</option>
-              {items.map((row) => <option key={row._id} value={row._id}>{row.name}</option>)}
-            </select>
+            <SearchableSelect
+              items={items.map((row) => ({ value: row._id, label: row.name, tags: row.unit ? `${row.stockQty ?? 0} ${row.unit}` : '' }))}
+              value={form.itemId}
+              onChange={(value) => set('itemId', value)}
+              emptyLabel="Select item"
+              searchPlaceholder="Type item name…"
+              required
+            />
           </Field>
           <Field label="Quantity" required>
             <MoneyInput prefix="" suffix={item?.unit || ''} value={form.quantity} onChange={(value) => set('quantity', value)} required />
@@ -173,10 +175,12 @@ export function TxnPopup({ txn = null, items, preset = {}, onClose, onSaved }) {
               <PartySelect parties={parties} value={form.partyId} onChange={(value) => set('partyId', value)} prefer={['supplier']} allowEmpty emptyLabel="Not saved / cash" />
             </Field>
             <Field label="Payment">
-              <select className="input" value={form.paidNow ? 'yes' : 'no'} onChange={(event) => set('paidNow', event.target.value === 'yes')}>
-                <option value="yes">Paid now</option>
-                <option value="no" disabled={!form.partyId}>On credit (supplier ledger)</option>
-              </select>
+              {/* On credit needs a supplier to owe */}
+              <OptionSelect
+                options={[{ value: 'yes', label: 'Paid now' }, ...(form.partyId ? [{ value: 'no', label: 'On credit (supplier ledger)' }] : [])]}
+                value={form.paidNow ? 'yes' : 'no'}
+                onChange={(value) => set('paidNow', value === 'yes')}
+              />
             </Field>
           </FieldGrid>
         </FormSection>

@@ -7,7 +7,7 @@ import { formatMonth, formatRupees, idOf, toDayInput, todayInput } from '../../u
 import { ENTRY_TYPES, getRoleLabel } from '../../utils/payroll';
 import FormPopup from '../FormPopup';
 import FormSection, { FieldGrid } from '../FormSection';
-import { VehicleSelect } from '../Pickers';
+import { OptionSelect, SearchableSelect, VehicleSelect } from '../Pickers';
 import { Field, MoneyInput } from '../ui';
 
 /**
@@ -79,12 +79,16 @@ export default function EntryPopup({ entry = null, employees, month, preset = {}
       )}
       <FormSection number={1} title="Employee & Amount" tone="blue">
         <Field label="Employee" required hint={owed !== undefined ? (owed >= 0 ? `Salary owed till now: ${formatRupees(owed)}` : `Advance outstanding: ${formatRupees(-owed)}`) : ''}>
-          <select className="input" value={form.employeeId} onChange={(event) => pickEmployee(event.target.value)} required>
-            <option value="" disabled>Select employee</option>
-            {employees.filter((employee) => employee.isActive || employee._id === form.employeeId).map((employee) => (
-              <option key={employee._id} value={employee._id}>{employee.name} · {getRoleLabel(employee.role)}</option>
-            ))}
-          </select>
+          <SearchableSelect
+            items={employees
+              .filter((employee) => employee.isActive || employee._id === form.employeeId)
+              .map((employee) => ({ value: employee._id, label: employee.name, tags: getRoleLabel(employee.role), search: employee.mobile }))}
+            value={form.employeeId}
+            onChange={pickEmployee}
+            emptyLabel="Select employee"
+            searchPlaceholder="Type employee name…"
+            required
+          />
         </Field>
         <FieldGrid cols={3}>
           <Field label="Amount" required>
@@ -103,9 +107,7 @@ export default function EntryPopup({ entry = null, employees, month, preset = {}
         <FormSection number={2} title="Payment" tone="emerald">
           <FieldGrid cols={2}>
             <Field label="Paid By">
-              <select className="input" value={form.mode} onChange={(event) => set('mode', event.target.value)}>
-                {PAYMENT_MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
+              <OptionSelect options={PAYMENT_MODE_OPTIONS} value={form.mode} onChange={(value) => set('mode', value)} />
             </Field>
             <Field label="Book Expense To" hint="Counts in this vehicle's profit">
               <VehicleSelect vehicles={vehicles} value={form.vehicleId} onChange={(value) => set('vehicleId', value)} allowEmpty emptyLabel="No vehicle (general expense)" includeSold />

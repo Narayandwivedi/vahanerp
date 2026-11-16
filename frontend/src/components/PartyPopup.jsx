@@ -5,6 +5,7 @@ import { PARTY_TYPE_OPTIONS } from '../utils/constants';
 import FormPopup from './FormPopup';
 import FormSection, { FieldGrid } from './FormSection';
 import { Field, MoneyInput } from './ui';
+import { OptionSelect } from './Pickers';
 
 const EMPTY = { name: '', type: 'customer', mobile: '', address: '', gstin: '', openingBalance: '', balanceSide: 'receivable', notes: '' };
 
@@ -89,10 +90,7 @@ export default function PartyPopup({ party = null, defaultType = 'customer', onC
             <MoneyInput value={form.openingBalance} onChange={(value) => set('openingBalance', value)} />
           </Field>
           <Field label="Balance Is">
-            <select className="input" value={form.balanceSide} onChange={(event) => set('balanceSide', event.target.value)}>
-              <option value="receivable">They owe me</option>
-              <option value="payable">I owe them</option>
-            </select>
+            <OptionSelect options={[{ value: 'receivable', label: 'They owe me' }, { value: 'payable', label: 'I owe them' }]} value={form.balanceSide} onChange={(value) => set('balanceSide', value)} />
           </Field>
           <Field label="Notes" htmlFor="party-notes" className="sm:col-span-2">
             <textarea id="party-notes" rows={2} className="input resize-none" value={form.notes} onChange={(event) => set('notes', event.target.value)} placeholder="Any additional notes…" />

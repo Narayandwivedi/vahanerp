@@ -10,7 +10,7 @@ import StatCard from '../components/StatCard';
 import MonthFilter from '../components/MonthFilter';
 import TripPopup from '../components/TripPopup';
 import TripDetailPopup from '../components/TripDetailPopup';
-import { VehicleSelect } from '../components/Pickers';
+import { OptionSelect, VehicleSelect } from '../components/Pickers';
 import { EmptyState, ErrorBox, Loading, Page, PageHeader, PanelHeader, RowAction, TD, TH } from '../components/ui';
 
 const STATUS = {
@@ -71,12 +71,15 @@ export default function Trips() {
 
       <section className="panel">
         <PanelHeader title="Trips" count={list.length} search={search} onSearch={setSearch} searchPlaceholder="Search place, trip no." onRefresh={reload} loading={loading}>
-          <select className="input h-9 min-h-0 w-auto py-0 text-xs md:text-sm" value={paymentType} onChange={(event) => setPaymentType(event.target.value)} aria-label="Payment">
-            <option value="">All payments</option>
-            <option value="credit">Credit</option>
-            <option value="partial">Partial</option>
-            <option value="full">Paid</option>
-          </select>
+          <OptionSelect
+            options={[{ value: 'credit', label: 'Credit' }, { value: 'partial', label: 'Partial' }, { value: 'full', label: 'Paid' }]}
+            value={paymentType}
+            onChange={setPaymentType}
+            allowEmpty
+            emptyLabel="All payments"
+            ariaLabel="Payment"
+            triggerClassName="h-9 min-h-0 w-auto py-0 text-xs md:text-sm"
+          />
           <div className="w-48"><VehicleSelect vehicles={vehicles} value={vehicleId} onChange={setVehicleId} allowEmpty emptyLabel="All vehicles" includeSold /></div>
           <MonthFilter value={month} onChange={setMonth} />
         </PanelHeader>
