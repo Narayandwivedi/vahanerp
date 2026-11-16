@@ -16,6 +16,11 @@
 }
 
 @layer base {
+  /* Smaller laptops (1024–1535px wide, e.g. 1366×768 or 1920×1080 at 125%): everything a little smaller so more fits.
+   * Sizes are in rem, so this scales text, spacing and popups together. Phones and bigger screens stay at 16px. */
+  @media (min-width: 1024px) and (max-width: 1535px) {
+    html { font-size: 14px; }
+  }
   body { @apply bg-slate-50 text-slate-900 antialiased; }
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; }

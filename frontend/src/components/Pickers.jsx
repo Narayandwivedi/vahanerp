@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { getCategoryLabel, getPartyTypeLabel } from '../utils/constants';
 import { focusNextField } from '../utils/enterNav';
@@ -31,6 +32,9 @@ function SearchSelect({
   const searchRef = useRef(null);
   const listRef = useRef(null);
   const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  // Where the open list sits on screen (it floats above the popup, so a scrolling popup body never cuts it off)
+  const [menuPos, setMenuPos] = useState(null);
   // hideSearch: what was typed in the last moment, to jump to the first option that matches it
   const typed = useRef({ text: '', at: 0 });
 
@@ -73,11 +77,46 @@ function SearchSelect({
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (event) => {
-      if (!boxRef.current?.contains(event.target)) close();
+      if (!boxRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) close();
     };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
+
+  // Place the list under the field (or over it, with coverField); on a short screen it opens upward
+  // when there is more room above, and it is never taller than the room it has
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPos(null);
+      return undefined;
+    }
+    const place = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const margin = 8;
+      const start = coverField ? rect.top : rect.bottom + 4;
+      const below = window.innerHeight - start - margin;
+      const above = (coverField ? rect.bottom : rect.top - 4) - margin;
+      const wanted = Math.min(menuRef.current?.scrollHeight || 300, 320);
+      const up = below < wanted && above > below;
+      const width = Math.max(rect.width, 224);
+      let left = menuAlign === 'right' ? rect.right - width : rect.left;
+      left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+      setMenuPos({
+        left,
+        width,
+        maxHeight: Math.max(120, up ? above : below),
+        ...(up ? { bottom: window.innerHeight - (coverField ? rect.bottom : rect.top - 4) } : { top: start }),
+      });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open, coverField, menuAlign]);
 
   // Keep the highlighted row in view
   useEffect(() => {
@@ -187,8 +226,13 @@ function SearchSelect({
         />
       )}
 
-      {open && (
-        <div className={`absolute z-50 min-w-[14rem] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl ${coverField ? 'top-0' : 'mt-1'} ${menuAlign === 'right' ? 'right-0' : 'left-0 right-0'}`}>
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[70] flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
+          style={menuPos ? { left: menuPos.left, width: menuPos.width, maxHeight: menuPos.maxHeight, top: menuPos.top, bottom: menuPos.bottom } : { visibility: 'hidden', top: 0, left: 0 }}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
           {!hideSearch && (
             <div className="relative border-b border-slate-100 p-2">
               <Search size={14} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -206,7 +250,7 @@ function SearchSelect({
               />
             </div>
           )}
-          <ul ref={listRef} role="listbox" className="max-h-64 overflow-y-auto py-1">
+          <ul ref={listRef} role="listbox" className="min-h-0 flex-1 overflow-y-auto py-1">
             {options.length === 0 && <li className="px-3 py-3 text-center text-sm text-slate-500">{query ? <>Nothing matches &ldquo;{query}&rdquo;</> : 'Nothing to pick yet'}</li>}
             {options.map((option, index) => {
               const isPicked = option.value === (value || '');
@@ -233,7 +277,8 @@ function SearchSelect({
               );
             })}
           </ul>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
