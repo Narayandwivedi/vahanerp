@@ -26,6 +26,8 @@ const staffSchema = new Schema(
     canEdit: { type: Boolean, default: false },
     // Also sees the owner's entries (read only), not just their own
     seeOwnerEntries: { type: Boolean, default: false },
+    // Enters trips without seeing or setting the rate and amounts; the owner prices them
+    hideTripMoney: { type: Boolean, default: false },
     // What they add waits in the Activity Center until the owner approves it
     needsApproval: { type: Boolean, default: true },
     notes: text,

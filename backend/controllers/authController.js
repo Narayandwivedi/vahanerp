@@ -31,6 +31,7 @@ const sanitizeStaff = (staff) => ({
   editMode: Staff.editModeOf(staff),
   editDays: staff.editDays ?? 5,
   seeOwnerEntries: Boolean(staff.seeOwnerEntries),
+  hideTripMoney: Boolean(staff.hideTripMoney),
   needsApproval: staff.needsApproval !== false,
 });
 // A staff login sees only the company's name, not the owner's account details

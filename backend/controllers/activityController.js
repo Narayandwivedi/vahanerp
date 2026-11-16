@@ -2,6 +2,7 @@ const { PendingChange, Staff, Trip, DieselEntry, Payment, MeterReading, Expense 
 const { registry } = require("../utils/crud");
 const { summarizer, detailsOf } = require("../utils/activity");
 const { DAY_MS } = require("../utils/common");
+const { hidesTripMoney, redactTrip, redactTripSummary } = require("../utils/tripMoney");
 
 /**
  * Activity Center.
@@ -186,12 +187,18 @@ const mine = async (req, res) => {
       .sort({ createdAt: -1 }).lean(),
   ]);
   const staffId = String(req.staff._id);
+  // Staff kept from trip prices see trips without their amounts
+  const hide = hidesTripMoney(req);
+  const shown = (entity, row) => (hide && entity === "trip" ? { ...row, ...redactTripSummary(row) } : row);
   res.json({
     from: period.from,
     to: period.to,
     // Only their own entries come with the full record, to open for editing
-    rows: rows.map(({ doc, ...row }) => ({ ...row, mine: row.by.kind === "staff" && row.by.id === staffId, doc: row.by.id === staffId ? doc : undefined })),
-    changes: changes.map(changeRow),
+    rows: rows.map(({ doc, ...row }) => {
+      const full = row.by.id === staffId ? doc : undefined;
+      return { ...shown(row.entity, row), mine: row.by.kind === "staff" && row.by.id === staffId, doc: hide && row.entity === "trip" ? redactTrip(full) : full };
+    }),
+    changes: changes.map(changeRow).map((change) => (hide && change.entity === "trip" ? { ...change, summary: redactTripSummary(change.summary), before: redactTripSummary(change.before) } : change)),
   });
 };
 

@@ -33,6 +33,7 @@ const registry = {};
  *  entity                  an entry staff can add: staff see only their own (and the owner's when allowed),
  *                          change only their own, and with "save on approval" it waits for the owner
  *  summarize(doc, userId)  { date, title, detail, amount } of an entry, for the Activity Center
+ *  redact(req, doc)        what of a record this login may see (default: all of it)
  */
 const crudRouter = (Model, options = {}) => {
   const router = express.Router();
@@ -50,6 +51,7 @@ const crudRouter = (Model, options = {}) => {
     beforeDelete = async () => "",
     entity = "",
     summarize = null,
+    redact = (req, doc) => doc,
   } = options;
 
   // Forms send "" for an empty date or an unpicked party / vehicle; store those as null
@@ -98,7 +100,7 @@ const crudRouter = (Model, options = {}) => {
     return doc;
   };
 
-  const populated = (id) => Model.findById(id).populate(populate).lean();
+  const populated = async (req, id) => redact(req, await Model.findById(id).populate(populate).lean());
 
   // A staff edit waits for approval when the login's edit mode says so (older entries only, for "request_after_days")
   const editNeedsApproval = (req, doc) => {
@@ -144,20 +146,20 @@ const crudRouter = (Model, options = {}) => {
     const visible = visibleTo(req);
     if (visible) query.$and = [visible];
     const rows = await Model.find(query).sort(sort).populate(populate).lean();
-    res.json(rows);
+    res.json(rows.map((row) => redact(req, row)));
   });
 
   router.get("/:id", async (req, res) => {
     const doc = await findOwn(req).populate(populate).lean();
     if (!doc) return res.status(404).json({ message: "Not found" });
-    res.json(doc);
+    res.json(redact(req, doc));
   });
 
   router.post("/", async (req, res) => {
     const body = stripSystem(blanksToNull({ ...req.body }));
     if (req.staff && entity && req.staff.needsApproval) return holdForApproval(req, res, "create", body);
     const doc = await createDoc(req, body);
-    res.status(201).json(await populated(doc._id));
+    res.status(201).json(await populated(req, doc._id));
   });
 
   router.put("/:id", async (req, res) => {
@@ -169,7 +171,7 @@ const crudRouter = (Model, options = {}) => {
     const body = stripSystem(blanksToNull({ ...req.body }));
     if (req.staff && entity && editNeedsApproval(req, doc)) return holdForApproval(req, res, "update", body, doc);
     await updateDoc(req, doc, body);
-    res.json(await populated(doc._id));
+    res.json(await populated(req, doc._id));
   });
 
   router.delete("/:id", async (req, res) => {

@@ -3,6 +3,7 @@ const { Expense, Employee, DieselEntry } = require("../models");
 const { round2, toNumber, idOf, lineAmount, routeKey } = require("../utils/common");
 const { refuse, ownVehicle } = require("../utils/guards");
 const { refreshVehicleKm } = require("../utils/stock");
+const { hidesTripMoney, keepTripMoney, redactTrip } = require("../utils/tripMoney");
 
 // A trip's expenses live as Expense records on its vehicle, so vehicle profit and reports count them
 const syncTripExpenses = async (userId, trip) => {
@@ -34,7 +35,9 @@ const crudOptions = {
   filters: ["vehicleId", "partyId", "status", "hirePartyId", "driverId", "paymentType"],
   searchFields: ["tripNo", "from", "to", "material", "notes"],
   number: { field: "tripNo", key: "trip", prefix: "TR" },
-  prepare: async (req, data) => {
+  prepare: async (req, data, old) => {
+    // Staff kept from prices: the rate and money stay as the owner set them (blank on a new trip)
+    if (hidesTripMoney(req)) keepTripMoney(data, old);
     const vehicle = await ownVehicle(req, data.vehicleId);
     if (!vehicle) throw refuse("Pick a vehicle");
     if (!data.partyId) throw refuse("Pick the party to bill");
@@ -77,6 +80,7 @@ const crudOptions = {
     data.amount = round2(data.freightAmount + data.materialAmount);
     // Money the party paid on the trip: nothing = credit, all = full, some = partial
     const received = round2(Math.max(0, toNumber(data.receivedAmount)));
+    if (received > data.amount && hidesTripMoney(req)) throw refuse("This change makes the bill less than what was already received. Ask the owner to change it.");
     if (received > data.amount) throw refuse(`Received cannot be more than the bill (₹${data.amount}). Enter any extra in Money Received.`);
     data.receivedAmount = received;
     data.paymentType = received <= 0 ? "credit" : received >= data.amount ? "full" : "partial";
@@ -103,6 +107,7 @@ const crudOptions = {
     data.expenseTotal = round2(data.expenses.reduce((total, row) => total + row.amount, 0));
     return data;
   },
+  redact: (req, doc) => (hidesTripMoney(req) ? redactTrip(doc) : doc),
   afterSave: async (req, doc, old) => {
     await syncTripExpenses(req.userId, doc);
     await refreshVehicleKm(req.userId, doc.vehicleId);

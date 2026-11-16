@@ -155,7 +155,9 @@ const sumText = (basis, quantity, rate, km) => {
 export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }) {
   const { vehicles, parties, reload: reloadMasters } = useMasters();
   // Staff pick from the drivers the owner added; they cannot add one
-  const { isStaff } = useAuth();
+  const { isStaff, staff } = useAuth();
+  // A staff login the owner keeps from prices: no rate, bill, payment or owner pay on the form
+  const hideMoney = isStaff && Boolean(staff?.hideTripMoney);
   const [form, setForm] = useState(() => (trip ? fromTrip(trip) : { ...EMPTY, ...preset }));
   // Which field a new party is added for: Bill To ('partyId') or Bought From ('materialSupplierId')
   const [addingParty, setAddingParty] = useState(null);
@@ -293,8 +295,13 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
   // Material I supply is billed with the transport; margin is on the transport only
   // A machine at a site carries no material, so it never has a material section
   const suppliesMaterial = !isMachinery && form.materialBy === 'me';
-  // Sections after Material move up one when it is hidden
-  const skip = isMachinery ? 1 : 0;
+  // Section numbers: Material is gone for a machine; payment and owner pay are gone when prices are hidden
+  let sectionCount = 2;
+  const materialNo = isMachinery ? 0 : ++sectionCount;
+  const paymentNo = hideMoney ? 0 : ++sectionCount;
+  const ownerNo = isHired && !hideMoney ? ++sectionCount : 0;
+  const expensesNo = ++sectionCount;
+  const otherNo = ++sectionCount;
   const materialAmount = suppliesMaterial ? toNumber(form.materialAmount) : 0;
   const total = amount + materialAmount;
   // Where the material came from: a supplier (paid now, the rest on their account) or cash
@@ -449,7 +456,9 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
         submitDisabled={saving}
         submitLabel={trip ? 'Update' : 'Save Trip'}
         enterToNext
-        footerExtra={(
+        footerExtra={hideMoney ? (
+          <span className="text-xs text-slate-500">Rate and amount are filled in by the owner</span>
+        ) : (
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
             <span className="text-xs font-medium text-slate-500">Bill</span>
             <span className="text-base font-bold text-slate-900">{formatRupees(total)}</span>
@@ -493,7 +502,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
                   onClick={() => pickRoute(index === routeIndex ? '' : String(index))}
                   className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 transition ${index === routeIndex ? 'bg-primary-600 text-white ring-primary-600' : 'bg-white text-slate-600 ring-slate-200 hover:ring-primary-300'}`}
                 >
-                  {routeLabel(route)} · {formatRupees(route.rate)}/{unit}{route.distanceKm && basis === 'per_km' ? ` · ${formatNumber(route.distanceKm, 0)} km` : ''}{isHired && route.hireRate ? ` · owner ${formatRupees(route.hireRate)}` : ''}
+                  {routeLabel(route)}{!hideMoney && ` · ${formatRupees(route.rate)}/${unit}`}{route.distanceKm && basis === 'per_km' ? ` · ${formatNumber(route.distanceKm, 0)} km` : ''}{isHired && route.hireRate && !hideMoney ? ` · owner ${formatRupees(route.hireRate)}` : ''}
                 </button>
               ))}
             </div>
@@ -516,15 +525,15 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
           </div>
           )}
 
-          <div className={`grid gap-3 md:gap-4 ${basis === 'per_ton_km' ? 'grid-cols-2 sm:grid-cols-4' : askQuantity ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
+          <div className={`grid gap-3 md:gap-4 ${basis === 'per_ton_km' ? (hideMoney ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4') : askQuantity ? (hideMoney ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-3') : (hideMoney ? 'grid-cols-1' : 'grid-cols-2')}`}>
             {/* How the party is charged, then the rate, then how much */}
             <Field label="Charge By" required htmlFor="trip-basis">
               {/* Enter from To opens its list; picking with Enter moves on to the rate */}
               <OptionSelect id="trip-basis" options={chargeTypesFor(vehicle)} value={basis} onChange={changeBasis} required coverField />
             </Field>
-            <Field label={basis === 'per_trip' ? (isMachinery ? 'Amount' : 'Trip Amount') : basis === 'per_ton_km' ? 'Rate per Ton per KM' : basis === 'per_cft' ? 'Rate per Cubic Foot' : `Rate per ${unit}`} required>
+            {!hideMoney && <Field label={basis === 'per_trip' ? (isMachinery ? 'Amount' : 'Trip Amount') : basis === 'per_ton_km' ? 'Rate per Ton per KM' : basis === 'per_cft' ? 'Rate per Cubic Foot' : `Rate per ${unit}`} required>
               <MoneyInput value={form.rate} onChange={(value) => set('rate', value)} suffix={unit ? `/${unit}` : ''} required />
-            </Field>
+            </Field>}
             {askQuantity && (
               <Field label={QUANTITY_LABELS[basis]} required>
                 <MoneyInput prefix="" suffix={quantityUnit} value={form.quantity} onChange={(value) => set('quantity', value)} placeholder={QUANTITY_PLACEHOLDERS[basis]} required />
@@ -537,6 +546,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
             )}
           </div>
 
+          {!hideMoney && (
           <div className={`flex items-center justify-between rounded-xl px-4 py-2.5 ring-1 transition ${amount > 0 ? 'bg-emerald-50 ring-emerald-200' : 'bg-slate-50 ring-slate-200'}`}>
             <span className={`text-sm ${amount > 0 ? 'text-emerald-800' : 'text-slate-500'}`}>
               {sumText(basis, form.quantity, form.rate, form.distanceKm)}
@@ -544,11 +554,12 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
             </span>
             <span className={`text-lg font-bold ${amount > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>{formatRupees(amount)}</span>
           </div>
+          )}
         </FormSection>
 
         {/* 3. Material: loaded by the party (usual), or supplied by me and billed with the transport */}
         {!isMachinery && (
-        <FormSection number={3} title="Material" tone="emerald">
+        <FormSection number={materialNo} title="Material" tone="emerald">
           <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/70 p-1 ring-1 ring-emerald-200">
             {[
               { value: 'party', label: 'Party loads own material', icon: Package },
@@ -572,15 +583,17 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
           {suppliesMaterial ? (
             <>
               {/* What, and where it was bought */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
+              <div className={`grid grid-cols-1 gap-3 md:gap-4 ${hideMoney ? '' : 'sm:grid-cols-2'}`}>
                 <Field label="Which material" required htmlFor="trip-material" actionNextToLabel action={<AddLink onClick={() => setAddingMaterial(true)}>New Material</AddLink>}>
                   <OptionSelect id="trip-material" options={materialOptions.map((name) => ({ value: name, label: name }))} value={form.material} onChange={(value) => set('material', value)} emptyLabel="Select material" required coverField />
                 </Field>
-                <Field label="Bought From" hint="The party you bought it from, or Cash" actionNextToLabel action={<AddLink onClick={() => setAddingParty('materialSupplierId')}>Add Party</AddLink>}>
+                {!hideMoney && <Field label="Bought From" hint="The party you bought it from, or Cash" actionNextToLabel action={<AddLink onClick={() => setAddingParty('materialSupplierId')}>Add Party</AddLink>}>
                   <PartySelect parties={parties} value={form.materialSupplierId} onChange={(value) => set('materialSupplierId', value)} prefer={['supplier']} allowEmpty emptyLabel="Cash" hideSearch coverField />
-                </Field>
+                </Field>}
               </div>
 
+              {/* Buy, sell and paying the supplier: the owner's side when prices are hidden */}
+              {!hideMoney && (<>
               {/* Buy and sell */}
               <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <Field label="Buy Cost" hint={hasSupplier ? `What you pay ${partyName(form.materialSupplierId)}` : 'What you paid for it'}>
@@ -627,6 +640,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
                   <span className={`text-lg font-bold ${total > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>{formatRupees(total)}</span>
                 </div>
               </div>
+              </>)}
             </>
           ) : (
             <Field label="Material (optional)" htmlFor="trip-material">
@@ -637,7 +651,8 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
         )}
 
         {/* 4. How much the party paid on this trip */}
-        <FormSection number={4 - skip} title="Payment from Party" tone="indigo" hint="What is not paid now stays due in the party's ledger.">
+        {!hideMoney && (
+        <FormSection number={paymentNo} title="Payment from Party" tone="indigo" hint="What is not paid now stays due in the party's ledger.">
           {/* Total, then what is paid now; nothing paid = credit */}
           <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4 ${received > 0 ? 'md:grid-cols-3' : ''}`}>
             <Field label="Total Amount">
@@ -664,11 +679,12 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
             </span>
           </div>
         </FormSection>
+        )}
 
         {/* 5. What the owner of a hired vehicle gets */}
-        {isHired && (
+        {isHired && !hideMoney && (
           <FormSection
-            number={5 - skip}
+            number={ownerNo}
             tone="amber"
             title={`Owner Payment · ${vehicle?.ownerPartyId?.name || 'Hired vehicle'}`}
             action={(
@@ -715,7 +731,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
 
         {/* 4 or 5. Spends on the way: toll, puncture… each saved as an expense of the vehicle */}
         <FormSection
-          number={(isHired ? 6 : 5) - skip}
+          number={expensesNo}
           title="Trip Expenses"
           tone="rose"
           action={<AddLink onClick={() => addExpense()}>Add Expense</AddLink>}
@@ -782,7 +798,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
         </FormSection>
 
         {/* 6 or 7. Other details */}
-        <FormSection number={(isHired ? 7 : 6) - skip} title="Other Details" tone="slate">
+        <FormSection number={otherNo} title="Other Details" tone="slate">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
             <Field label="Status" htmlFor="trip-status">
               <OptionSelect id="trip-status" options={TRIP_STATUSES} value={form.status} onChange={(value) => set('status', value)} coverField />

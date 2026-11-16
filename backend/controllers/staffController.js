@@ -13,7 +13,7 @@ const readSwitches = (body) => {
   if (body.canAdd && typeof body.canAdd === "object") {
     data.canAdd = Object.fromEntries(STAFF_ENTRY_TYPES.map((key) => [key, body.canAdd[key] !== false]));
   }
-  ["seeOwnerEntries", "needsApproval", "isActive"].forEach((key) => {
+  ["seeOwnerEntries", "needsApproval", "isActive", "hideTripMoney"].forEach((key) => {
     if (body[key] !== undefined) data[key] = Boolean(body[key]);
   });
   if (body.editMode !== undefined) {

@@ -34,6 +34,7 @@ function StaffPopup({ staff = null, onClose, onSaved }) {
     editDays: staff?.editDays ?? 5,
     seeOwnerEntries: staff?.seeOwnerEntries ?? false,
     needsApproval: staff?.needsApproval ?? true,
+    hideTripMoney: staff?.hideTripMoney ?? false,
     isActive: staff?.isActive ?? true,
   }));
   const [saving, setSaving] = useState(false);
@@ -117,6 +118,7 @@ function StaffPopup({ staff = null, onClose, onSaved }) {
       <FormSection number={4} title="Rights" tone="indigo">
         <div className="grid gap-2">
           <Toggle checked={form.needsApproval} onChange={(value) => set('needsApproval', value)} label="Save on approval" hint="New entries wait in the Activity Center until you approve them." />
+          <Toggle checked={form.hideTripMoney} onChange={(value) => set('hideTripMoney', value)} label="Hide trip rate & amount" hint="They enter the trip (vehicle, party, route, quantity, expenses) but never see or set the rate, bill or payment. You fill those in." />
           <Toggle checked={form.seeOwnerEntries} onChange={(value) => set('seeOwnerEntries', value)} label="See owner's entries" hint="Also see your entries (view only). Otherwise they see only their own." />
           {staff && <Toggle checked={form.isActive} onChange={(value) => set('isActive', value)} label="Login active" hint="Switch off to stop this login at once without deleting it." />}
         </div>
@@ -151,6 +153,7 @@ export default function StaffSettings() {
       request_after_days: `Edits directly up to ${staff.editDays ?? 5} days, older on request`,
     }[staff.editMode || 'none'],
     staff.seeOwnerEntries ? "Sees owner's entries" : '',
+    staff.hideTripMoney ? 'Trip rates hidden' : '',
   ].filter(Boolean).join(' · ');
 
   const addsText = (staff) => {
