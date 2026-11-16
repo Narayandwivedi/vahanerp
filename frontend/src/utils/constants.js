@@ -61,6 +61,14 @@ export const MACHINERY_HIRE_OPTIONS = [
   { value: 'fixed', label: 'Fixed Amount', unit: '' },
 ];
 
+// What kind of spend an expense type is
+export const EXPENSE_KIND_OPTIONS = [
+  { value: 'vehicle', label: 'Vehicle Expense', hint: 'Running cost of a vehicle: repair, tyre, service', badge: 'badge-blue' },
+  { value: 'trip', label: 'Trip Expense', hint: 'Spent on the way: toll, loading, police. Shows in Add Trip.', badge: 'badge-orange' },
+  { value: 'office', label: 'Office / General', hint: 'No vehicle: rent, electricity, office staff', badge: 'badge-gray' },
+];
+export const getExpenseKind = (value) => EXPENSE_KIND_OPTIONS.find((option) => option.value === value) || EXPENSE_KIND_OPTIONS[0];
+
 export const getCategoryLabel = (value) => VEHICLE_CATEGORY_OPTIONS.find((option) => option.value === value)?.label || 'Vehicle';
 
 export const PARTY_TYPE_OPTIONS = [

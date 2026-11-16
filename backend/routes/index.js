@@ -16,6 +16,7 @@ router.use("/trips", require("./tripRoutes"));
 router.use("/contracts", require("./contractRoutes"));
 router.use("/payments", require("./paymentRoutes"));
 router.use("/expenses", require("./expenseRoutes"));
+router.use("/expense-types", require("./expenseTypeRoutes"));
 router.get("/expense-categories", categories);
 router.use("/inventory", require("./inventoryRoutes"));
 router.use("/purchases", require("./purchaseRoutes"));

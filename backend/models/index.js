@@ -9,6 +9,7 @@ const Trip = require("./Trip");
 const Contract = require("./Contract");
 const Payment = require("./Payment");
 const Expense = require("./Expense");
+const ExpenseType = require("./ExpenseType");
 const InventoryItem = require("./InventoryItem");
 const InventoryTxn = require("./InventoryTxn");
 const Purchase = require("./Purchase");
@@ -36,6 +37,7 @@ module.exports = {
   Contract,
   Payment,
   Expense,
+  ExpenseType,
   InventoryItem,
   InventoryTxn,
   Purchase,

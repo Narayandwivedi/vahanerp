@@ -3,10 +3,13 @@ import { toast } from 'react-toastify';
 import apiClient from '../utils/api';
 import useFetch from '../utils/useFetch';
 import useMasters from '../utils/useMasters';
+import { useAuth } from '../context/AuthContext';
+import { getExpenseKind } from '../utils/constants';
 import { idOf, toDayInput, todayInput } from '../utils/format';
 import { meterUnitOf } from '../utils/meter';
 import FormPopup from './FormPopup';
-import FormSection, { FieldGrid } from './FormSection';
+import ExpenseTypePopup from './ExpenseTypePopup';
+import FormSection, { AddLink, FieldGrid } from './FormSection';
 import { VehicleSelect } from './Pickers';
 import { Field, MoneyInput } from './ui';
 
@@ -16,11 +19,22 @@ const QUICK = ['Diesel', 'Tyre', 'Repair & Maintenance', 'Driver Salary', 'Toll'
 export default function ExpensePopup({ expense = null, preset = {}, onClose, onSaved }) {
   const { vehicles } = useMasters();
   const { data: categories } = useFetch('/expense-categories', {}, []);
+  // The owner's own expense types, each a vehicle, trip or office spend; the usual ones until any are added
+  const { data: savedTypes, reload: reloadTypes } = useFetch('/expense-types', {}, []);
+  const types = savedTypes || [];
+  const { isStaff } = useAuth();
+  const [addingType, setAddingType] = useState(false);
   const [form, setForm] = useState(() => (expense
     ? { ...expense, date: toDayInput(expense.date), vehicleId: idOf(expense.vehicleId), odometer: expense.odometer || '' }
     : { date: todayInput(), vehicleId: '', category: '', amount: '', odometer: '', paidTo: '', mode: 'cash', notes: '', ...preset }));
   const [saving, setSaving] = useState(false);
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  // An office / general type has no vehicle
+  const pickType = (name, list = types) => setForm((prev) => {
+    const type = list.find((item) => item.name.toLowerCase() === String(name).toLowerCase());
+    return { ...prev, category: name, ...(type?.kind === 'office' ? { vehicleId: '', odometer: '' } : {}) };
+  });
+  const pickedType = types.find((item) => item.name.toLowerCase() === String(form.category || '').trim().toLowerCase());
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -49,17 +63,23 @@ export default function ExpensePopup({ expense = null, preset = {}, onClose, onS
             <MoneyInput value={form.amount} onChange={(value) => set('amount', value)} required autoFocus />
           </Field>
         </FieldGrid>
-        <Field label="Expense Type" required htmlFor="exp-cat">
-          <input id="exp-cat" className="input" list="expense-categories" value={form.category} onChange={(event) => set('category', event.target.value)} placeholder="Pick below or type" required />
+        <Field
+          label="Expense Type"
+          required
+          htmlFor="exp-cat"
+          hint={pickedType ? `${getExpenseKind(pickedType.kind).label}: ${getExpenseKind(pickedType.kind).hint}` : ''}
+          action={!isStaff && <AddLink onClick={() => setAddingType(true)}>New Type</AddLink>}
+        >
+          <input id="exp-cat" className="input" list="expense-categories" value={form.category} onChange={(event) => pickType(event.target.value)} placeholder="Pick below or type" required />
           <datalist id="expense-categories">
             {(categories || []).map((category) => <option key={category} value={category} />)}
           </datalist>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {QUICK.map((category) => (
+            {(types.length ? types.map((type) => type.name) : QUICK).map((category) => (
               <button
                 key={category}
                 type="button"
-                onClick={() => set('category', category)}
+                onClick={() => pickType(category)}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition ${form.category === category ? 'bg-primary-600 text-white ring-primary-600' : 'bg-white text-slate-600 ring-slate-200 hover:ring-slate-300'}`}
               >
                 {category}
@@ -68,6 +88,16 @@ export default function ExpensePopup({ expense = null, preset = {}, onClose, onS
           </div>
         </Field>
       </FormSection>
+
+      {addingType && (
+        <ExpenseTypePopup
+          onClose={() => setAddingType(false)}
+          onSaved={async (saved) => {
+            const list = await reloadTypes();
+            if (saved?.name) pickType(saved.name, Array.isArray(list) ? list : [...types, saved]);
+          }}
+        />
+      )}
 
       <FormSection number={2} title="Vehicle" tone="blue" hint="Leave the vehicle empty for an office / general expense">
         <FieldGrid cols={2}>

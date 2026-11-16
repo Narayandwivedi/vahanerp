@@ -6,6 +6,7 @@ import apiClient from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { getStoredTheme, setStoredTheme } from '../utils/theme';
 import FormSection from '../components/FormSection';
+import ExpenseTypeSettings from '../components/ExpenseTypeSettings';
 import StaffSettings from '../components/StaffSettings';
 import Segmented from '../components/Segmented';
 import { Field, MoneyInput, Page, PageHeader } from '../components/ui';
@@ -103,6 +104,9 @@ export default function Settings() {
           <button type="submit" className="btn-primary px-8" disabled={saving}><Save size={16} /> Save Settings</button>
         </div>
       </form>
+
+      {/* The owner's expense types: vehicle, trip or office spends */}
+      <ExpenseTypeSettings />
 
       {/* Staff logins: separate sign-in, only the add buttons, with "save on approval" */}
       <StaffSettings />

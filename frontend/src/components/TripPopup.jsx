@@ -67,7 +67,8 @@ const hirePayOptions = (machinery) => TRIP_BASIS_OPTIONS
 const OTHER_EXPENSE = 'Other';
 // Picking "Tyre Puncture" opens its own details popup: puncture date, amount and notes
 const PUNCTURE_EXPENSE = 'Tyre Puncture';
-const EXPENSE_TYPES = [PUNCTURE_EXPENSE, 'Toll', OTHER_EXPENSE];
+// The built-in ones; the owner's Trip Expense types come in between (see tripExpenseTypes)
+const BUILT_IN_EXPENSE_TYPES = [PUNCTURE_EXPENSE, 'Toll'];
 // date: only a puncture keeps its own date; other spends are on the trip's date
 const EMPTY_EXPENSE = { category: '', amount: '', notes: '', date: '' };
 const isPuncture = (row) => row.category === PUNCTURE_EXPENSE;
@@ -189,6 +190,14 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
   useEffect(() => {
     loadMaterials();
   }, []);
+  // The owner's Trip Expense types, listed between the built-in ones and "Other"
+  const [savedExpenseTypes, setSavedExpenseTypes] = useState([]);
+  useEffect(() => {
+    apiClient.get('/expense-types', { params: { kind: 'trip' } })
+      .then((list) => setSavedExpenseTypes(Array.isArray(list) ? list.map((type) => type.name) : []))
+      .catch(() => {});
+  }, []);
+  const EXPENSE_TYPES = [...new Set([...BUILT_IN_EXPENSE_TYPES, ...savedExpenseTypes]), OTHER_EXPENSE];
   // An older trip (or one typed before switching) may hold a material not in the list: keep it pickable
   const materialNames = materials.map((item) => item.name);
   const typedMaterial = String(form.material || '').trim();

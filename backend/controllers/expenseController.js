@@ -1,5 +1,5 @@
 const { summarizer } = require("../utils/activity");
-const { Expense } = require("../models");
+const { Expense, ExpenseType } = require("../models");
 const { ownVehicle } = require("../utils/guards");
 const { refreshVehicleKm } = require("../utils/stock");
 
@@ -36,10 +36,13 @@ const crudOptions = {
   afterDelete: (req, doc) => refreshVehicleKm(req.userId, doc.vehicleId),
 };
 
-// GET /expense-categories: the usual ones plus any typed before
+// GET /expense-categories: my expense types first, then the usual ones and any typed before
 const categories = async (req, res) => {
-  const used = await Expense.distinct("category", { userId: req.userId });
-  res.json([...new Set([...DEFAULT_CATEGORIES, ...used])]);
+  const [types, used] = await Promise.all([
+    ExpenseType.find({ userId: req.userId }).sort({ name: 1 }).select("name").lean(),
+    Expense.distinct("category", { userId: req.userId }),
+  ]);
+  res.json([...new Set([...types.map((type) => type.name), ...DEFAULT_CATEGORIES, ...used])]);
 };
 
 module.exports = { crudOptions, categories };

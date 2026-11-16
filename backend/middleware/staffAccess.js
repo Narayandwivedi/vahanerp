@@ -17,7 +17,7 @@ const ENTRY_ROUTES = {
 };
 
 // Lists the entry forms read
-const READ_ONLY = ["vehicles", "parties", "materials", "expense-categories"];
+const READ_ONLY = ["vehicles", "parties", "materials", "expense-categories", "expense-types"];
 // Masters a form can add on the spot ("New Party", "New Material")
 const ADD_FROM_FORM = ["parties", "materials"];
 
