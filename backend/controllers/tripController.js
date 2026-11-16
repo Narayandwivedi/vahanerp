@@ -45,6 +45,25 @@ const crudOptions = {
     const startKm = toNumber(data.startKm);
     const endKm = toNumber(data.endKm);
     if (endKm && startKm && endKm < startKm) throw refuse("End km cannot be less than start km");
+    // Staff kept from prices do not pick how the trip is charged: an edit keeps the owner's way; a new trip
+    // is charged per trip (a machine per hour, with the hours they enter), or the way its saved route is
+    if (hidesTripMoney(req)) {
+      const byTime = (basis) => basis === "per_hour" || basis === "per_day";
+      if (old) {
+        const staffQuantity = data.quantity;
+        Object.assign(data, { billingBasis: old.billingBasis, quantity: old.quantity, distanceKm: old.distanceKm, hireBasis: old.hireBasis, hireQuantity: old.hireQuantity });
+        // Hours / days worked are theirs to enter
+        if (byTime(old.billingBasis)) data.quantity = staffQuantity;
+      } else if (vehicle.isMachinery) {
+        data.billingBasis = byTime(data.billingBasis) ? data.billingBasis : "per_hour";
+        data.distanceKm = 0;
+      } else {
+        const saved = (vehicle.routeRates || []).find((row) => routeKey(row) === routeKey(data));
+        data.billingBasis = saved?.basis || "per_trip";
+        data.quantity = data.billingBasis === "per_trip" ? 1 : 0;
+        data.distanceKm = 0;
+      }
+    }
     // Machinery works at one site, kept in "from"; it has no "to"
     if (vehicle.isMachinery) {
       data.to = "";

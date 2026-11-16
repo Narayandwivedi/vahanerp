@@ -500,7 +500,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
         </FormSection>
 
         {/* 2. Route and how the party is charged */}
-        <FormSection number={2} title={isMachinery ? 'Work Site & Charge' : 'Route & Charge'} tone="sky">
+        <FormSection number={2} title={isMachinery ? (hideMoney ? 'Work Site' : 'Work Site & Charge') : (hideMoney ? 'Route' : 'Route & Charge')} tone="sky">
           {routes.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-medium text-slate-500">Saved:</span>
@@ -534,12 +534,14 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
           </div>
           )}
 
-          <div className={`grid gap-3 md:gap-4 ${basis === 'per_ton_km' ? (hideMoney ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4') : askQuantity ? (hideMoney ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-3') : (hideMoney ? 'grid-cols-1' : 'grid-cols-2')}`}>
+          {/* Staff kept from prices see only how much (a machine's hours); how it is charged and the rate are the owner's */}
+          {(!hideMoney || (isMachinery && askQuantity)) && (
+          <div className={`grid gap-3 md:gap-4 ${hideMoney ? 'grid-cols-1 sm:grid-cols-2' : basis === 'per_ton_km' ? 'grid-cols-2 sm:grid-cols-4' : askQuantity ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
             {/* How the party is charged, then the rate, then how much */}
-            <Field label="Charge By" required htmlFor="trip-basis">
+            {!hideMoney && <Field label="Charge By" required htmlFor="trip-basis">
               {/* Enter from To opens its list; picking with Enter moves on to the rate */}
               <OptionSelect id="trip-basis" options={chargeTypesFor(vehicle)} value={basis} onChange={changeBasis} required coverField />
-            </Field>
+            </Field>}
             {!hideMoney && <Field label={basis === 'per_trip' ? (isMachinery ? 'Amount' : 'Trip Amount') : basis === 'per_ton_km' ? 'Rate per Ton per KM' : basis === 'per_cft' ? 'Rate per Cubic Foot' : `Rate per ${unit}`} required>
               <MoneyInput value={form.rate} onChange={(value) => set('rate', value)} suffix={unit ? `/${unit}` : ''} required />
             </Field>}
@@ -554,6 +556,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
               </Field>
             )}
           </div>
+          )}
 
           {!hideMoney && (
           <div className={`flex items-center justify-between rounded-xl px-4 py-2.5 ring-1 transition ${amount > 0 ? 'bg-emerald-50 ring-emerald-200' : 'bg-slate-50 ring-slate-200'}`}>
