@@ -23,11 +23,18 @@ const CHARGE_TYPES = [
   { value: 'per_ton_km', label: 'Per Ton per KM' },
   { value: 'per_cft', label: 'Per Cubic Feet' },
 ];
+// Machinery (JCB, tractor, crane) works at one site: charged by the hour, the day or a fixed amount
+const MACHINE_CHARGE_TYPES = [
+  { value: 'per_hour', label: 'Per Hour' },
+  { value: 'per_day', label: 'Per Day' },
+  { value: 'per_trip', label: 'Fixed Amount' },
+];
+const chargeTypesFor = (vehicle) => (vehicle?.isMachinery ? MACHINE_CHARGE_TYPES : CHARGE_TYPES);
 
 // What the quantity box asks for under each way of charging (per ton per km: the tons; the km has its own box)
-const QUANTITY_LABELS = { per_trip: 'Trips', per_km: 'Distance', per_ton: 'Weight', per_ton_km: 'Weight', per_cft: 'Cubic Feet' };
-const QUANTITY_PLACEHOLDERS = { per_trip: '1', per_km: 'How many km', per_ton: 'Tons loaded', per_ton_km: 'Tons loaded', per_cft: 'How many cubic feet' };
-const QUANTITY_UNITS = { per_ton_km: 'ton' };
+const QUANTITY_LABELS = { per_trip: 'Trips', per_km: 'Distance', per_ton: 'Weight', per_ton_km: 'Weight', per_cft: 'Cubic Feet', per_hour: 'Hours Worked', per_day: 'Days Worked' };
+const QUANTITY_PLACEHOLDERS = { per_trip: '1', per_km: 'How many km', per_ton: 'Tons loaded', per_ton_km: 'Tons loaded', per_cft: 'How many cubic feet', per_hour: 'How many hours', per_day: 'How many days' };
+const QUANTITY_UNITS = { per_ton_km: 'ton', per_hour: 'hrs', per_day: 'days' };
 
 // How the party paid what it paid on the trip (the rest stays owed in its ledger)
 const RECEIVED_MODES = [
@@ -49,7 +56,11 @@ const TRIP_STATUSES = [
   { value: 'completed', label: 'Completed' },
 ];
 // Paying the owner of a hired vehicle: monthly hire (nothing per trip) or per trip / km / ton…
-const HIRE_PAY_OPTIONS = TRIP_BASIS_OPTIONS.map((option) => ({ value: option.value, label: `Pay ${option.label}` }));
+// A machine's owner is paid per hour / day / fixed; a vehicle's per trip / km / ton…
+const MACHINE_BASES = ['per_hour', 'per_day', 'fixed'];
+const hirePayOptions = (machinery) => TRIP_BASIS_OPTIONS
+  .filter((option) => (machinery ? MACHINE_BASES.includes(option.value) : !['per_hour', 'per_day'].includes(option.value)))
+  .map((option) => ({ value: option.value, label: `Pay ${option.label}` }));
 
 // The kinds of spend on the way, for now
 // Picking "Other" asks for the expense's own name, which is saved as its type
@@ -185,8 +196,10 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
 
   const vehicle = vehicles.find((item) => item._id === form.vehicleId);
   const isHired = vehicle?.ownership === 'hired';
+  // Machinery works at one site: one location instead of From → To
+  const isMachinery = Boolean(vehicle?.isMachinery);
   const basis = form.billingBasis;
-  const routes = (vehicle?.routeRates || []).filter((route) => basisOf(route) === basis);
+  const routes = isMachinery ? [] : (vehicle?.routeRates || []).filter((route) => basisOf(route) === basis);
   const routeIndex = routes.findIndex((route) => routeKey(route) === routeKey(form));
   const onSavedRoute = routeIndex !== -1;
 
@@ -221,7 +234,14 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
     const picked = fresh || vehicles.find((item) => item._id === vehicleId);
     if (vehicleId) setDriverSignal((count) => count + 1);
     setForm((prev) => {
-      const next = { ...prev, vehicleId, ...hireDefaults(picked, prev.billingBasis, prev.quantity) };
+      // A machine charges per hour / day; a vehicle by trip, km or ton. A basis that does not fit starts over.
+      const fits = chargeTypesFor(picked).some((option) => option.value === prev.billingBasis);
+      const fitted = fits ? {} : { billingBasis: picked?.isMachinery ? 'per_hour' : 'per_trip', quantity: picked?.isMachinery ? '' : '1', rate: '', distanceKm: '' };
+      // A machine has one work site, no "to"
+      const site = picked?.isMachinery ? { to: '' } : {};
+      const basisNow = fitted.billingBasis || prev.billingBasis;
+      const quantityNow = fitted.quantity ?? prev.quantity;
+      const next = { ...prev, ...fitted, ...site, vehicleId, ...hireDefaults(picked, basisNow, quantityNow) };
       // The vehicle's own driver, unless one is already picked
       if (!prev.driverId) next.driverId = driverOf(vehicleId);
       // Already on one of this vehicle's routes: take its rate
@@ -271,7 +291,10 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
   const hireKm = partyKm ?? form.distanceKm;
   const hireAmount = isHired && hireBasis ? calcAmount(hireBasis, hireQuantity, form.hireRate, hireKm) : 0;
   // Material I supply is billed with the transport; margin is on the transport only
-  const suppliesMaterial = form.materialBy === 'me';
+  // A machine at a site carries no material, so it never has a material section
+  const suppliesMaterial = !isMachinery && form.materialBy === 'me';
+  // Sections after Material move up one when it is hidden
+  const skip = isMachinery ? 1 : 0;
   const materialAmount = suppliesMaterial ? toNumber(form.materialAmount) : 0;
   const total = amount + materialAmount;
   // Where the material came from: a supplier (paid now, the rest on their account) or cash
@@ -361,7 +384,11 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
   if (received > 0) paymentLabel = received >= total ? 'Fully paid' : 'Partial payment';
 
   const handleSubmit = async () => {
-    if (!String(form.from || '').trim() || !String(form.to || '').trim()) {
+    if (isMachinery && !String(form.from || '').trim()) {
+      toast.error('Enter the work site');
+      return;
+    }
+    if (!isMachinery && (!String(form.from || '').trim() || !String(form.to || '').trim())) {
       toast.error('Enter the route: From (location A) → To (location B)');
       return;
     }
@@ -385,7 +412,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
     try {
       // distanceKm carries the km of a per ton per km charge, the party's or the owner's
       const distanceKm = basis === 'per_ton_km' || (isHired && hireBasis === 'per_ton_km') ? hireKm : 0;
-      const payload = { ...form, hireQuantity, distanceKm, receivedAmount: received, materialCostPaid };
+      const payload = { ...form, ...(isMachinery ? { to: '', material: '', materialBy: 'party' } : {}), hireQuantity, distanceKm, receivedAmount: received, materialCostPaid };
       const saved = trip ? await apiClient.put(`/trips/${trip._id}`, payload) : await apiClient.post('/trips', payload);
       // A staff save with "save on approval" waits for the owner
       toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : trip ? 'Trip updated' : 'Trip added');
@@ -415,7 +442,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
     <>
       <FormPopup
         title={trip ? `Edit Trip ${trip.tripNo}` : 'Add Trip'}
-        subtitle="Bill a party per trip, km, ton, ton per km or cubic feet"
+        subtitle={isMachinery ? 'Machine work at one site, billed per hour, day or a fixed amount' : 'Bill a party per trip, km, ton, ton per km or cubic feet'}
         maxWidth="max-w-4xl"
         onClose={onClose}
         onSubmit={handleSubmit}
@@ -455,7 +482,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
         </FormSection>
 
         {/* 2. Route and how the party is charged */}
-        <FormSection number={2} title="Route & Charge" tone="sky">
+        <FormSection number={2} title={isMachinery ? 'Work Site & Charge' : 'Route & Charge'} tone="sky">
           {routes.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-medium text-slate-500">Saved:</span>
@@ -472,7 +499,12 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
             </div>
           )}
 
-          {/* Every trip records where the vehicle went: From → To */}
+          {/* A machine records the one site it worked at; a vehicle where it went: From → To */}
+          {isMachinery ? (
+            <Field label="Work Site" required htmlFor="trip-from" hint="Where the machine worked">
+              <input id="trip-from" className="input" value={form.from} onChange={(event) => set('from', event.target.value)} placeholder="Site / location" autoComplete="off" required />
+            </Field>
+          ) : (
           <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
             <Field label="From" required htmlFor="trip-from">
               <input id="trip-from" className="input" value={form.from} onChange={(event) => typeRoute('from', event.target.value)} placeholder="Location A" autoComplete="off" required />
@@ -482,14 +514,15 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
               <input id="trip-to" className="input" value={form.to} onChange={(event) => typeRoute('to', event.target.value)} placeholder="Location B" autoComplete="off" required />
             </Field>
           </div>
+          )}
 
           <div className={`grid gap-3 md:gap-4 ${basis === 'per_ton_km' ? 'grid-cols-2 sm:grid-cols-4' : askQuantity ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
             {/* How the party is charged, then the rate, then how much */}
             <Field label="Charge By" required htmlFor="trip-basis">
               {/* Enter from To opens its list; picking with Enter moves on to the rate */}
-              <OptionSelect id="trip-basis" options={CHARGE_TYPES} value={basis} onChange={changeBasis} required coverField />
+              <OptionSelect id="trip-basis" options={chargeTypesFor(vehicle)} value={basis} onChange={changeBasis} required coverField />
             </Field>
-            <Field label={basis === 'per_trip' ? 'Trip Amount' : basis === 'per_ton_km' ? 'Rate per Ton per KM' : basis === 'per_cft' ? 'Rate per Cubic Foot' : `Rate per ${unit}`} required>
+            <Field label={basis === 'per_trip' ? (isMachinery ? 'Amount' : 'Trip Amount') : basis === 'per_ton_km' ? 'Rate per Ton per KM' : basis === 'per_cft' ? 'Rate per Cubic Foot' : `Rate per ${unit}`} required>
               <MoneyInput value={form.rate} onChange={(value) => set('rate', value)} suffix={unit ? `/${unit}` : ''} required />
             </Field>
             {askQuantity && (
@@ -514,6 +547,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
         </FormSection>
 
         {/* 3. Material: loaded by the party (usual), or supplied by me and billed with the transport */}
+        {!isMachinery && (
         <FormSection number={3} title="Material" tone="emerald">
           <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/70 p-1 ring-1 ring-emerald-200">
             {[
@@ -600,9 +634,10 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
             </Field>
           )}
         </FormSection>
+        )}
 
         {/* 4. How much the party paid on this trip */}
-        <FormSection number={4} title="Payment from Party" tone="indigo" hint="What is not paid now stays due in the party's ledger.">
+        <FormSection number={4 - skip} title="Payment from Party" tone="indigo" hint="What is not paid now stays due in the party's ledger.">
           {/* Total, then what is paid now; nothing paid = credit */}
           <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4 ${received > 0 ? 'md:grid-cols-3' : ''}`}>
             <Field label="Total Amount">
@@ -633,12 +668,12 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
         {/* 5. What the owner of a hired vehicle gets */}
         {isHired && (
           <FormSection
-            number={5}
+            number={5 - skip}
             tone="amber"
             title={`Owner Payment · ${vehicle?.ownerPartyId?.name || 'Hired vehicle'}`}
             action={(
               <OptionSelect
-                options={HIRE_PAY_OPTIONS}
+                options={hirePayOptions(isMachinery)}
                 value={form.hireBasis}
                 onChange={(value) => set('hireBasis', value)}
                 allowEmpty
@@ -680,7 +715,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
 
         {/* 4 or 5. Spends on the way: toll, puncture… each saved as an expense of the vehicle */}
         <FormSection
-          number={isHired ? 6 : 5}
+          number={(isHired ? 6 : 5) - skip}
           title="Trip Expenses"
           tone="rose"
           action={<AddLink onClick={() => addExpense()}>Add Expense</AddLink>}
@@ -747,7 +782,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
         </FormSection>
 
         {/* 6 or 7. Other details */}
-        <FormSection number={isHired ? 7 : 6} title="Other Details" tone="slate">
+        <FormSection number={(isHired ? 7 : 6) - skip} title="Other Details" tone="slate">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
             <Field label="Status" htmlFor="trip-status">
               <OptionSelect id="trip-status" options={TRIP_STATUSES} value={form.status} onChange={(value) => set('status', value)} coverField />
@@ -791,7 +826,7 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
             <Field label="Trip" hint="The puncture is saved with this trip">
               <div className="input flex items-center gap-2 bg-slate-50 text-slate-900">
                 <span className="font-mono font-semibold">{trip ? trip.tripNo : 'This new trip'}</span>
-                {(form.from || form.to) && <span className="truncate text-xs text-slate-500">{form.from || '…'} → {form.to || '…'}</span>}
+                {(form.from || form.to) && <span className="truncate text-xs text-slate-500">{isMachinery ? form.from : `${form.from || '…'} → ${form.to || '…'}`}</span>}
               </div>
             </Field>
             <Field label="Puncture Expense" required>

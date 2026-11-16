@@ -1,14 +1,16 @@
-const { Schema, owner, ref, money, text, BILLING_BASES, makeModel } = require("./schemaHelpers");
+const { Schema, owner, ref, money, text, TRIP_BASES, makeModel } = require("./schemaHelpers");
 
 const vehicleSchema = new Schema(
   {
     ...owner,
     vehicleNo: { type: String, trim: true, uppercase: true, required: true, maxlength: 10 },
-    category: { type: String, enum: ["truck", "trailer", "hyva", "tanker", "container", "pickup", "jcb", "other"], default: "truck" },
+    category: { type: String, enum: ["truck", "trailer", "hyva", "tanker", "container", "pickup", "jcb", "tractor", "crane", "other"], default: "truck" },
     // own: my vehicle. hired: taken from ownerPartyId (per trip / km / ton, or monthly through a hire contract)
+    // Machinery (JCB, tractor, crane) works at one site instead of running from A to B
+    isMachinery: { type: Boolean, default: false },
     ownership: { type: String, enum: ["own", "hired"], default: "own" },
     ownerPartyId: ref("Party"),
-    hireBasis: { type: String, enum: ["", ...BILLING_BASES], default: "" },
+    hireBasis: { type: String, enum: ["", ...TRIP_BASES], default: "" },
     hireRate: money,
     /**
      * Agreed rates for routes this vehicle runs, each per trip, per km or per ton:

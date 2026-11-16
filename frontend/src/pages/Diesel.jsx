@@ -86,7 +86,7 @@ export default function Diesel() {
                     </td>
                     <td className={TD}>
                       <p className="font-mono font-semibold">{entry.vehicleId?.vehicleNo}</p>
-                      <p className="text-xs text-slate-500">{entry.tripId ? `Trip ${entry.tripId.tripNo}${entry.tripId.from ? ` · ${entry.tripId.from} → ${entry.tripId.to}` : ''}` : 'No trip'}</p>
+                      <p className="text-xs text-slate-500">{entry.tripId ? `Trip ${entry.tripId.tripNo}${entry.tripId.from ? ` · ${[entry.tripId.from, entry.tripId.to].filter(Boolean).join(' → ')}` : ''}` : 'No trip'}</p>
                     </td>
                     <td className={TD}>
                       <p>{entry.partyId?.name || 'Cash'}</p>

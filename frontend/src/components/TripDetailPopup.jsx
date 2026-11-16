@@ -103,10 +103,17 @@ export default function TripDetailPopup({ tripId, onClose }) {
           </Details>
         </FormSection>
 
-        <FormSection number={2} title="Route Details" tone="sky">
+        <FormSection number={2} title={vehicle.isMachinery ? 'Work Site' : 'Route Details'} tone="sky">
           <Details>
-            <Detail label="From" value={textOr(trip.from)} />
-            <Detail label="To" value={textOr(trip.to)} />
+            {/* Machinery works at one site: only "from" holds it */}
+            {vehicle.isMachinery ? (
+              <Detail label="Work Site" value={textOr(trip.from)} />
+            ) : (
+              <>
+                <Detail label="From" value={textOr(trip.from)} />
+                <Detail label="To" value={textOr(trip.to)} />
+              </>
+            )}
             <Detail label="Charged Distance" value={toNumber(trip.distanceKm) ? `${formatNumber(trip.distanceKm, 0)} km` : trip.billingBasis === 'per_km' && toNumber(trip.quantity) ? `${formatNumber(trip.quantity, 0)} km` : DASH} />
             <Detail label="Starting KM" value={num(trip.startKm, 0)} />
             <Detail label="Ending KM" value={num(trip.endKm, 0)} />

@@ -168,7 +168,7 @@ export default function DieselPopup({ entry = null, preset = {}, onClose, onSave
               options={tripChoices.map((trip) => ({
                 value: trip._id,
                 label: trip.tripNo,
-                tags: `${formatDate(trip.date)} · ${trip.from || '—'} → ${trip.to || '—'}${trip.partyId?.name ? ` · ${trip.partyId.name}` : ''}${STATUS_TAG[trip.status] || ''}`,
+                tags: `${formatDate(trip.date)} · ${[trip.from, trip.to].filter(Boolean).join(' → ') || '—'}${trip.partyId?.name ? ` · ${trip.partyId.name}` : ''}${STATUS_TAG[trip.status] || ''}`,
               }))}
               value={form.tripId}
               onChange={(value) => set('tripId', value)}

@@ -27,7 +27,8 @@ const text = { type: String, trim: true, default: "" };
 // How a trip or a hired vehicle is charged
 const BILLING_BASES = ["per_trip", "per_km", "per_ton", "fixed"];
 // A trip can also be charged per ton per km (tons × km × rate) or per cubic foot (cft × rate)
-const TRIP_BASES = [...BILLING_BASES, "per_ton_km", "per_cft"];
+// per_hour / per_day: machinery (JCB, tractor, crane) working at one site
+const TRIP_BASES = [...BILLING_BASES, "per_ton_km", "per_cft", "per_hour", "per_day"];
 
 // Reuses the model when the file is loaded twice (e.g. node --watch)
 const makeModel = (name, schema) => mongoose.models[name] || mongoose.model(name, schema);

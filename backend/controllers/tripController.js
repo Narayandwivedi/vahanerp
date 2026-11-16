@@ -7,6 +7,7 @@ const { refreshVehicleKm } = require("../utils/stock");
 // A trip's expenses live as Expense records on its vehicle, so vehicle profit and reports count them
 const syncTripExpenses = async (userId, trip) => {
   await Expense.deleteMany({ userId, tripId: trip._id });
+  // Machinery works at one site: only "from" holds it
   const route = [trip.from, trip.to].filter(Boolean).join(" → ");
   const rows = (trip.expenses || []).filter((row) => toNumber(row.amount) > 0);
   if (!rows.length) return;
@@ -41,6 +42,11 @@ const crudOptions = {
     const startKm = toNumber(data.startKm);
     const endKm = toNumber(data.endKm);
     if (endKm && startKm && endKm < startKm) throw refuse("End km cannot be less than start km");
+    // Machinery works at one site, kept in "from"; it has no "to"
+    if (vehicle.isMachinery) {
+      data.to = "";
+      if (!String(data.from || "").trim()) throw refuse("Enter the work site");
+    }
     // A trip on one of the vehicle's routes, charged the route's way, takes the route's rate when none was typed
     const route = (vehicle.routeRates || []).find((row) => routeKey(row) === routeKey(data));
     const routeBasis = route?.basis || "per_trip";

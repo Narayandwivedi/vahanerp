@@ -86,7 +86,7 @@ module.exports = { summarizer, ENTITIES: Object.keys(SUMMARIES) };
  */
 const { Employee, Trip } = require("../models");
 
-const BASIS_TEXT = { per_trip: "trip", per_km: "km", per_ton: "ton", per_ton_km: "ton per km", per_cft: "cubic foot", fixed: "fixed" };
+const BASIS_TEXT = { per_trip: "trip", per_km: "km", per_ton: "ton", per_ton_km: "ton per km", per_cft: "cubic foot", per_hour: "hour", per_day: "day", fixed: "fixed" };
 const qty = (value) => toNumber(value).toLocaleString("en-IN", { maximumFractionDigits: 3 });
 const dayText = (value) => (value ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 const modeText = (value) => String(value || "cash").toUpperCase();

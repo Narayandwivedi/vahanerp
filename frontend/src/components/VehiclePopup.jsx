@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'react-toastify';
 import apiClient from '../utils/api';
 import useMasters from '../utils/useMasters';
-import { BILLING_BASIS_OPTIONS, VEHICLE_CATEGORY_OPTIONS, getBasisUnit } from '../utils/constants';
+import { BILLING_BASIS_OPTIONS, MACHINERY_CATEGORIES, MACHINERY_HIRE_OPTIONS, VEHICLE_CATEGORY_OPTIONS, getBasisUnit } from '../utils/constants';
 import { idOf, todayInput } from '../utils/format';
 import { meterUnitOf } from '../utils/meter';
 import FormPopup from './FormPopup';
@@ -17,13 +17,18 @@ const METER_UNITS = [
   { value: 'hrs', label: 'Hours', hint: 'Hour meter (JCB, machines)' },
 ];
 
+const WORK_TYPES = [
+  { value: false, label: 'Vehicle', hint: 'Runs trips from one place to another' },
+  { value: true, label: 'Machinery', hint: 'JCB, tractor, crane: works at one site' },
+];
+
 const OWNERSHIP = [
   { value: 'own', label: 'My Vehicle', hint: 'I own it. I can run trips or give it on monthly rent.' },
   { value: 'hired', label: 'Hired Vehicle', hint: "Another party's vehicle I hire per trip / km / ton or monthly" },
 ];
 
 const EMPTY = {
-  vehicleNo: '', category: 'truck', ownership: 'own', ownerPartyId: '', hireBasis: '', hireRate: '', routeRates: [],
+  vehicleNo: '', category: 'truck', isMachinery: false, ownership: 'own', ownerPartyId: '', hireBasis: '', hireRate: '', routeRates: [],
   meterUnit: 'km', capacityTons: '', openingKm: '', status: 'active', notes: '',
 };
 
@@ -35,10 +40,24 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const isHired = form.ownership === 'hired';
   const unit = meterUnitOf(form);
+  const isMachinery = Boolean(form.isMachinery);
+  // A machine works at one site, so it has no route rates; its owner is paid per hour / day
+  const hireOptions = isMachinery ? MACHINERY_HIRE_OPTIONS : BILLING_BASIS_OPTIONS;
+  // Switching to machinery (or back) drops route rates and an owner pay that no longer fits
+  const setMachinery = (value) => setForm((prev) => {
+    const options = value ? MACHINERY_HIRE_OPTIONS : BILLING_BASIS_OPTIONS;
+    return {
+      ...prev,
+      isMachinery: value,
+      ...(value ? { routeRates: [] } : {}),
+      ...(prev.hireBasis && !options.some((option) => option.value === prev.hireBasis) ? { hireBasis: '', hireRate: '' } : {}),
+      ...(!vehicle && value ? { meterUnit: 'hrs' } : {}),
+    };
+  });
 
   const handleSubmit = async () => {
     setSaving(true);
-    const payload = { ...form };
+    const payload = { ...form, isMachinery };
     delete payload.openingKm;
     delete payload.currentKm;
     try {
@@ -59,7 +78,7 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
 
   return (
     <>
-      <FormPopup title={vehicle ? 'Edit Vehicle' : 'Add Vehicle'} subtitle="Your own truck or a hired one" maxWidth="max-w-2xl" onClose={onClose} onSubmit={handleSubmit} submitDisabled={saving}>
+      <FormPopup title={vehicle ? 'Edit Vehicle' : 'Add Vehicle'} subtitle="Your own truck or machine, or a hired one" maxWidth="max-w-2xl" onClose={onClose} onSubmit={handleSubmit} submitDisabled={saving}>
         <FormSection number={1} title="Vehicle" tone="blue">
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <Field label="Vehicle Number" required htmlFor="veh-no">
@@ -68,12 +87,30 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
             <Field label="Type" htmlFor="veh-cat">
               <select id="veh-cat" className="input" value={form.category} onChange={(event) => {
                 const category = event.target.value;
-                setForm((prev) => ({ ...prev, category, ...(!vehicle && category === 'jcb' ? { meterUnit: 'hrs' } : {}) }));
+                set('category', category);
+                // JCB, tractor and crane are machinery; picking another type on a new entry makes it a vehicle again
+                if (!vehicle || MACHINERY_CATEGORIES.includes(category)) setMachinery(MACHINERY_CATEGORIES.includes(category));
               }}>
                 {VEHICLE_CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </Field>
           </div>
+          {/* Vehicle runs A → B; machinery works at one site, so its trips ask one location */}
+          <Field label="Works As" hint={WORK_TYPES.find((option) => option.value === isMachinery)?.hint}>
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/70 p-1 ring-1 ring-slate-200">
+              {WORK_TYPES.map((option) => (
+                <button
+                  key={option.label}
+                  type="button"
+                  onClick={() => setMachinery(option.value)}
+                  aria-pressed={isMachinery === option.value}
+                  className={`cursor-pointer rounded-lg px-2 py-2 text-sm font-semibold transition ${isMachinery === option.value ? 'bg-primary-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white hover:text-slate-900'}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </Field>
           <div className={`grid grid-cols-2 gap-3 md:gap-4 ${vehicle ? '' : 'md:grid-cols-3'}`}>
             <Field label="Vehicle Is" required htmlFor="veh-own" hint={OWNERSHIP.find((option) => option.value === form.ownership)?.hint}>
               <select id="veh-own" className="input" value={form.ownership} onChange={(event) => set('ownership', event.target.value)}>
@@ -104,7 +141,7 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
               <Field label="Pay Owner">
                 <select className="input" value={form.hireBasis} onChange={(event) => set('hireBasis', event.target.value)}>
                   <option value="">Monthly / no fixed rate</option>
-                  {BILLING_BASIS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  {hireOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </Field>
               {form.hireBasis && (
@@ -116,6 +153,7 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
           </FormSection>
         )}
 
+        {!isMachinery && (
         <FormSection
           number={isHired ? 3 : 2}
           title="Route Rates"
@@ -126,12 +164,15 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
         >
           <RouteRateFields routes={form.routeRates} isHired={isHired} onChange={(routeRates) => set('routeRates', routeRates)} />
         </FormSection>
+        )}
 
-        <FormSection number={isHired ? 4 : 3} title="Details" tone="slate">
+        <FormSection number={(isHired ? 3 : 2) + (isMachinery ? 0 : 1)} title="Details" tone="slate">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-            <Field label="Capacity">
-              <MoneyInput prefix="" suffix="ton" value={form.capacityTons} onChange={(value) => set('capacityTons', value)} />
-            </Field>
+            {!isMachinery && (
+              <Field label="Capacity">
+                <MoneyInput prefix="" suffix="ton" value={form.capacityTons} onChange={(value) => set('capacityTons', value)} />
+              </Field>
+            )}
             <Field label="Expected Mileage" hint={unit === 'hrs' ? 'Diesel per hour it should use. Flagged when it uses over 10% more.' : 'Km per litre it should give. Flagged when over 10% lower.'}>
               <MoneyInput prefix="" suffix={unit === 'hrs' ? 'ltr/hr' : 'km/l'} value={form.expectedMileage || ''} onChange={(value) => set('expectedMileage', value)} placeholder="Optional" />
             </Field>

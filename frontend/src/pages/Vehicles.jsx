@@ -86,7 +86,7 @@ export default function Vehicles() {
                       <p className="truncate font-mono text-sm font-semibold text-slate-800">{vehicle.vehicleNo}</p>
                       <span className={vehicle.ownership === 'own' ? 'badge-blue' : 'badge-orange'}>{vehicle.ownership === 'own' ? 'Mine' : 'Hired'}</span>
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">{getCategoryLabel(vehicle.category)} · {formatMeter(vehicle.currentKm, vehicle)}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">{getCategoryLabel(vehicle.category)}{vehicle.isMachinery ? ' · Machinery' : ''} · {formatMeter(vehicle.currentKm, vehicle)}</p>
                     {hireNote(vehicle).map((note) => <p key={note} className="truncate text-[11px] font-medium text-amber-700">{note}</p>)}
                   </div>
                   <span className={`shrink-0 text-sm font-bold ${(profitOf.get(vehicle._id)?.profit || 0) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatRupees(profitOf.get(vehicle._id)?.profit)}</span>
@@ -113,7 +113,7 @@ export default function Vehicles() {
                       <tr key={vehicle._id} className="tbl-row cursor-pointer" onClick={() => navigate(`/vehicles/${vehicle._id}`)}>
                         <td className={TD}>
                           <p className="whitespace-nowrap font-mono font-semibold text-slate-800">{vehicle.vehicleNo}</p>
-                          <p className="text-xs text-slate-500">{getCategoryLabel(vehicle.category)}{vehicle.capacityTons ? ` · ${vehicle.capacityTons} ton` : ''}</p>
+                          <p className="text-xs text-slate-500">{getCategoryLabel(vehicle.category)}{vehicle.isMachinery ? ' · Machinery' : ''}{vehicle.capacityTons ? ` · ${vehicle.capacityTons} ton` : ''}</p>
                         </td>
                         <td className={TD}>
                           <p className="font-medium text-slate-700">{vehicle.ownership === 'own' ? 'My Vehicle' : vehicle.ownerPartyId?.name || 'Hired'}</p>

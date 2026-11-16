@@ -14,6 +14,9 @@ export const QUOTE_BASIS_OPTIONS = [...BILLING_BASIS_OPTIONS, { value: 'per_mont
 const TRIP_ONLY_OPTIONS = [
   { value: 'per_ton_km', label: 'Per Ton per KM', unit: 'ton/km' },
   { value: 'per_cft', label: 'Per Cubic Feet', unit: 'cft' },
+  // Machinery (JCB, tractor, crane) working at one site
+  { value: 'per_hour', label: 'Per Hour', unit: 'hour' },
+  { value: 'per_day', label: 'Per Day', unit: 'day' },
 ];
 export const TRIP_BASIS_OPTIONS = [...BILLING_BASIS_OPTIONS, ...TRIP_ONLY_OPTIONS];
 
@@ -43,8 +46,19 @@ export const VEHICLE_CATEGORY_OPTIONS = [
   { value: 'tanker', label: 'Tanker' },
   { value: 'container', label: 'Container' },
   { value: 'pickup', label: 'Pickup' },
-  { value: 'jcb', label: 'JCB / Machine' },
+  { value: 'jcb', label: 'JCB' },
+  { value: 'tractor', label: 'Tractor' },
+  { value: 'crane', label: 'Crane' },
   { value: 'other', label: 'Other' },
+];
+
+// Types that are machinery by default: they work at one site, not from A to B
+export const MACHINERY_CATEGORIES = ['jcb', 'tractor', 'crane'];
+// How a machine's owner is paid when hired
+export const MACHINERY_HIRE_OPTIONS = [
+  { value: 'per_hour', label: 'Per Hour', unit: 'hour' },
+  { value: 'per_day', label: 'Per Day', unit: 'day' },
+  { value: 'fixed', label: 'Fixed Amount', unit: '' },
 ];
 
 export const getCategoryLabel = (value) => VEHICLE_CATEGORY_OPTIONS.find((option) => option.value === value)?.label || 'Vehicle';
