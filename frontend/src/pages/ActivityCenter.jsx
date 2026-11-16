@@ -174,7 +174,7 @@ const DetailsLink = ({ onClick }) => (
 );
 
 /** One waiting entry: what it is, its main facts (or for a change, only what changed), and the buttons. */
-function WaitingCard({ change, busy, onView, onReject, onApprove }) {
+function WaitingCard({ change, busy, onView, onReject, onApprove, onEdit }) {
   const isEdit = change.action === 'update';
   const details = change.details || [];
   const facts = basicLines(change.entity, details, change.summary?.amount);
@@ -199,9 +199,11 @@ function WaitingCard({ change, busy, onView, onReject, onApprove }) {
       footer={(
         <>
           <span className="hidden sm:inline"><DetailsLink onClick={onView} /></span>
-          <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <button type="button" className="btn-secondary btn-sm justify-center sm:hidden" onClick={onView}><Eye size={15} /> View</button>
             <button type="button" className="btn-secondary btn-sm justify-center text-rose-700" onClick={onReject} disabled={Boolean(busy)}><X size={15} /> Reject</button>
+            {/* Change it first, then it saves as approved */}
+            {!change.targetMissing && <button type="button" className="btn-secondary btn-sm justify-center" onClick={onEdit} disabled={Boolean(busy)}><Pencil size={15} /> Edit</button>}
             <button type="button" className="btn-primary btn-sm justify-center" onClick={onApprove} disabled={Boolean(busy)}><Check size={15} /> {busy === change.id ? 'Saving…' : 'Approve'}</button>
           </div>
         </>
@@ -248,6 +250,18 @@ function Waiting({ onChanged }) {
     reload();
     onChanged();
   };
+
+  // A waiting entry opened in its own form; saving it approves it with the owner's changes
+  const [editingChange, setEditingChange] = useState(null);
+  const approveEdited = async (payload) => {
+    const change = editingChange;
+    await apiClient.post(`/activity/pending/${change.id}/approve`, { data: payload });
+    toast.success(`${change.summary?.title || 'Entry'} changed, approved and saved`);
+    after();
+    return { approved: true };
+  };
+  // The form data as the staff sent it, shaped like a saved entry so the form opens filled in
+  const editRecord = (change) => ({ ...(change.data || {}), ...(change.targetId ? { _id: change.targetId } : {}) });
 
   const approve = async (change) => {
     setBusy(change.id);
@@ -318,10 +332,16 @@ function Waiting({ onChanged }) {
               onView={() => setViewing(change)}
               onReject={() => reject(change)}
               onApprove={() => approve(change)}
+              onEdit={() => setEditingChange(change)}
             />
           ))}
         </div>
       )}
+      {editingChange?.entity === 'trip' && <TripPopup trip={editRecord(editingChange)} approve={approveEdited} onClose={() => setEditingChange(null)} />}
+      {editingChange?.entity === 'diesel' && <DieselPopup entry={editRecord(editingChange)} approve={approveEdited} onClose={() => setEditingChange(null)} />}
+      {editingChange?.entity === 'payment' && <PaymentPopup payment={editRecord(editingChange)} approve={approveEdited} onClose={() => setEditingChange(null)} />}
+      {editingChange?.entity === 'expense' && <ExpensePopup expense={editRecord(editingChange)} approve={approveEdited} onClose={() => setEditingChange(null)} />}
+      {editingChange?.entity === 'reading' && <ReadingPopup reading={editRecord(editingChange)} approve={approveEdited} onClose={() => setEditingChange(null)} />}
       {viewing && (
         <EntryDetailPopup
           changeId={viewing.id}

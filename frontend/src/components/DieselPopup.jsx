@@ -31,7 +31,8 @@ const trim = (value) => String(Math.round(value * 100) / 100);
  * what is not paid now is owed to the pump and shows in its ledger (nothing paid = on credit).
  * Type the litres and rate (amount is worked out), or the amount and rate (litres are worked out).
  */
-export default function DieselPopup({ entry = null, preset = {}, onClose, onSaved }) {
+// approve(payload): opened from the Activity Center to change a staff entry; Save approves it with these changes
+export default function DieselPopup({ entry = null, preset = {}, onClose, onSaved, approve = null }) {
   // reload fetches vehicles and parties again
   const { vehicles, parties, reload: reloadParties } = useMasters();
   // Staff can only pick a vehicle the owner added
@@ -114,9 +115,9 @@ export default function DieselPopup({ entry = null, preset = {}, onClose, onSave
     setSaving(true);
     try {
       const payload = { ...form, paidAmount: paid };
-      const saved = entry ? await apiClient.put(`/diesel-entries/${entry._id}`, payload) : await apiClient.post('/diesel-entries', payload);
+      const saved = approve ? await approve(payload) : entry ? await apiClient.put(`/diesel-entries/${entry._id}`, payload) : await apiClient.post('/diesel-entries', payload);
       // A staff save with "save on approval" waits for the owner
-      toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : entry ? 'Diesel entry updated' : 'Diesel purchase saved');
+      if (!approve) toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : entry ? 'Diesel entry updated' : 'Diesel purchase saved');
       onSaved?.();
       onClose();
     } catch (error) {
@@ -130,7 +131,7 @@ export default function DieselPopup({ entry = null, preset = {}, onClose, onSave
   return (
     <>
       <FormPopup
-        title={entry ? `Edit Diesel Purchase ${entry.entryNo}` : 'Diesel Purchase'}
+        submitLabel={approve ? 'Save & Approve' : 'Save'} title={approve ? 'Edit & Approve' : entry ? `Edit Diesel Purchase ${entry.entryNo}` : 'Diesel Purchase'}
         subtitle="Diesel filled at a petrol pump straight into a vehicle. Booked as the vehicle's diesel cost."
         maxWidth="max-w-2xl"
         onClose={onClose}

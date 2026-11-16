@@ -68,7 +68,10 @@ const changeRow = (change) => ({
   before: change.action === "update" ? change.before : null,
   reviewNote: change.reviewNote,
   reviewedAt: change.reviewedAt,
+  ownerEdited: Boolean(change.ownerEdited),
   createdAt: change.createdAt,
+  // The form data as sent, so the owner can open it in its form and change it before approving
+  data: change.status === "pending" ? change.data : undefined,
   targetId: change.targetId ? String(change.targetId) : "",
 });
 
@@ -107,14 +110,16 @@ const feed = async (req, res) => {
   });
 };
 
-// The stored form data saved for real, as the staff who sent it
-const applyChange = async (change) => {
+// The stored form data saved for real, as the staff who sent it.
+// asOwner: the owner edited it first, so it is checked as the owner's own save (prices they set are kept),
+// while it still shows as added by the staff.
+const applyChange = async (change, { asOwner = false } = {}) => {
   const handler = registry[change.entity];
   if (!handler) throw Object.assign(new Error("This kind of entry can no longer be approved."), { status: 400 });
   const staff = await Staff.findById(change.staffId).lean();
   const actor = { kind: "staff", id: String(change.staffId), name: change.staffName || staff?.name || "Staff" };
   // The same request the staff made, so the form's own checks and totals run again
-  const req = { userId: change.userId, staff: staff || { _id: change.staffId, name: actor.name } };
+  const req = { userId: change.userId, staff: asOwner ? null : staff || { _id: change.staffId, name: actor.name } };
   const body = JSON.parse(JSON.stringify(change.data || {}));
   if (change.action === "create") {
     const doc = await handler.createDoc(req, body, actor);
@@ -128,12 +133,18 @@ const applyChange = async (change) => {
 
 const findPending = (req) => PendingChange.findOne({ _id: req.params.id, userId: req.userId, status: "pending" });
 
-// POST /activity/pending/:id/approve (owner)
+// POST /activity/pending/:id/approve { data? } (owner): data is the owner's edited form, saved in place of the staff's
 const approve = async (req, res) => {
   const change = await findPending(req);
   if (!change) return refuse(res, 404, "Already reviewed or not found");
+  const edited = req.body?.data && typeof req.body.data === "object" ? req.body.data : null;
+  if (edited) {
+    change.data = edited;
+    change.markModified("data");
+    change.ownerEdited = true;
+  }
   try {
-    change.targetId = await applyChange(change);
+    change.targetId = await applyChange(change, { asOwner: Boolean(edited) });
   } catch (error) {
     return refuse(res, error.status || 400, error.message || "Could not save this entry");
   }

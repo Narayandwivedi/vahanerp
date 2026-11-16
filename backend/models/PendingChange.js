@@ -31,6 +31,8 @@ const pendingChangeSchema = new Schema(
       amount: { type: Number, default: 0 },
     },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    // The owner changed it before approving (data then holds the owner's version)
+    ownerEdited: { type: Boolean, default: false },
     reviewNote: text,
     reviewedAt: { type: Date, default: null },
   },

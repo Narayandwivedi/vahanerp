@@ -153,7 +153,8 @@ const sumText = (basis, quantity, rate, km) => {
  * per trip: From (location A) → To (location B), typed or tapped from the vehicle's saved routes, and the trips; per km: the km and the rate;
  * per ton: the weight and the rate. On a hired vehicle paid per trip / km / ton, the owner's share is worked out too.
  */
-export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }) {
+// approve(payload): opened from the Activity Center to change a staff entry; Save approves it with these changes
+export default function TripPopup({ trip = null, preset = {}, onClose, onSaved, approve = null }) {
   const { vehicles, parties, reload: reloadMasters } = useMasters();
   // Staff pick from the drivers the owner added; they cannot add one
   const { isStaff, staff } = useAuth();
@@ -429,9 +430,9 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
       // distanceKm carries the km of a per ton per km charge, the party's or the owner's
       const distanceKm = basis === 'per_ton_km' || (isHired && hireBasis === 'per_ton_km') ? hireKm : 0;
       const payload = { ...form, ...(isMachinery ? { to: '', material: '', materialBy: 'party' } : {}), hireQuantity, distanceKm, receivedAmount: received, materialCostPaid };
-      const saved = trip ? await apiClient.put(`/trips/${trip._id}`, payload) : await apiClient.post('/trips', payload);
+      const saved = approve ? await approve(payload) : trip ? await apiClient.put(`/trips/${trip._id}`, payload) : await apiClient.post('/trips', payload);
       // A staff save with "save on approval" waits for the owner
-      toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : trip ? 'Trip updated' : 'Trip added');
+      if (!approve) toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : trip ? 'Trip updated' : 'Trip added');
       onSaved?.();
       onClose();
     } catch (error) {
@@ -457,13 +458,13 @@ export default function TripPopup({ trip = null, preset = {}, onClose, onSaved }
   return (
     <>
       <FormPopup
-        title={trip ? `Edit Trip ${trip.tripNo}` : 'Add Trip'}
+        title={approve ? 'Edit & Approve' : trip ? `Edit Trip ${trip.tripNo}` : 'Add Trip'}
         subtitle={isMachinery ? 'Machine work at one site, billed per hour, day or a fixed amount' : 'Bill a party per trip, km, ton, ton per km or cubic feet'}
         maxWidth="max-w-4xl"
         onClose={onClose}
         onSubmit={handleSubmit}
         submitDisabled={saving}
-        submitLabel={trip ? 'Update' : 'Save Trip'}
+        submitLabel={approve ? 'Save & Approve' : trip ? 'Update' : 'Save Trip'}
         enterToNext
         footerExtra={hideMoney ? (
           <span className="text-xs text-slate-500">Rate and amount are filled in by the owner</span>

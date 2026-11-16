@@ -11,7 +11,8 @@ import { OptionSelect, PartySelect } from './Pickers';
 import { Field, MoneyInput } from './ui';
 
 // Money received from a party, or paid to a party
-export default function PaymentPopup({ payment = null, preset = {}, onClose, onSaved }) {
+// approve(payload): opened from the Activity Center to change a staff entry; Save approves it with these changes
+export default function PaymentPopup({ payment = null, preset = {}, onClose, onSaved, approve = null }) {
   const { parties } = useMasters();
   const [form, setForm] = useState(() => (payment
     ? { ...payment, partyId: idOf(payment.partyId), date: toDayInput(payment.date) }
@@ -23,9 +24,9 @@ export default function PaymentPopup({ payment = null, preset = {}, onClose, onS
     setSaving(true);
     try {
       const payload = { date: form.date, type: form.type, partyId: form.partyId, amount: form.amount, mode: form.mode, reference: form.reference, notes: form.notes };
-      const saved = payment ? await apiClient.put(`/payments/${payment._id}`, payload) : await apiClient.post('/payments', payload);
+      const saved = approve ? await approve(payload) : payment ? await apiClient.put(`/payments/${payment._id}`, payload) : await apiClient.post('/payments', payload);
       // A staff save with "save on approval" waits for the owner
-      toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : 'Payment saved');
+      if (!approve) toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : 'Payment saved');
       onSaved?.();
       onClose();
     } catch (error) {
@@ -36,7 +37,7 @@ export default function PaymentPopup({ payment = null, preset = {}, onClose, onS
   };
 
   return (
-    <FormPopup title={payment ? 'Edit Payment' : 'Add Payment'} subtitle="Money in from a party, or money out to a party" maxWidth="max-w-2xl" onClose={onClose} onSubmit={handleSubmit} submitDisabled={saving}>
+    <FormPopup submitLabel={approve ? 'Save & Approve' : 'Save'} title={approve ? 'Edit & Approve' : payment ? 'Edit Payment' : 'Add Payment'} subtitle="Money in from a party, or money out to a party" maxWidth="max-w-2xl" onClose={onClose} onSubmit={handleSubmit} submitDisabled={saving}>
       <Segmented
         className="w-full self-stretch"
         value={form.type}

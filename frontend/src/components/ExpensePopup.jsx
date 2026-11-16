@@ -16,7 +16,8 @@ import { Field, MoneyInput } from './ui';
 const QUICK = ['Diesel', 'Tyre', 'Repair & Maintenance', 'Driver Salary', 'Toll', 'Insurance', 'Road Tax', 'EMI'];
 
 // Any spend: on a vehicle (counted in its profit) or general / office (counted in the business profit only)
-export default function ExpensePopup({ expense = null, preset = {}, onClose, onSaved }) {
+// approve(payload): opened from the Activity Center to change a staff entry; Save approves it with these changes
+export default function ExpensePopup({ expense = null, preset = {}, onClose, onSaved, approve = null }) {
   const { vehicles } = useMasters();
   const { data: categories } = useFetch('/expense-categories', {}, []);
   // The owner's own expense types, each a vehicle, trip or office spend; the usual ones until any are added
@@ -40,9 +41,9 @@ export default function ExpensePopup({ expense = null, preset = {}, onClose, onS
     setSaving(true);
     try {
       const payload = { date: form.date, vehicleId: form.vehicleId, category: form.category, amount: form.amount, odometer: form.odometer, paidTo: form.paidTo, mode: form.mode, notes: form.notes };
-      const saved = expense ? await apiClient.put(`/expenses/${expense._id}`, payload) : await apiClient.post('/expenses', payload);
+      const saved = approve ? await approve(payload) : expense ? await apiClient.put(`/expenses/${expense._id}`, payload) : await apiClient.post('/expenses', payload);
       // A staff save with "save on approval" waits for the owner
-      toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : 'Expense saved');
+      if (!approve) toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : 'Expense saved');
       onSaved?.();
       onClose();
     } catch (error) {
@@ -53,7 +54,7 @@ export default function ExpensePopup({ expense = null, preset = {}, onClose, onS
   };
 
   return (
-    <FormPopup title={expense ? 'Edit Expense' : 'Add Expense'} subtitle="Diesel, repair, toll, salary… on a vehicle or for the office" onClose={onClose} onSubmit={handleSubmit} submitDisabled={saving} maxWidth="max-w-2xl">
+    <FormPopup submitLabel={approve ? 'Save & Approve' : 'Save'} title={approve ? 'Edit & Approve' : expense ? 'Edit Expense' : 'Add Expense'} subtitle="Diesel, repair, toll, salary… on a vehicle or for the office" onClose={onClose} onSubmit={handleSubmit} submitDisabled={saving} maxWidth="max-w-2xl">
       <FormSection number={1} title="Expense" tone="rose">
         <FieldGrid cols={2}>
           <Field label="Date" required htmlFor="exp-date">

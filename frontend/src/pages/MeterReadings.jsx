@@ -21,7 +21,8 @@ const byOldest = (a, b) => toDayInput(a.date).localeCompare(toDayInput(b.date)) 
  * The opening is filled from the vehicle's last closing (or its odometer) until a different one is typed.
  * The closing can be left empty while the vehicle is out, and filled in later.
  */
-export function ReadingPopup({ reading = null, preset = {}, onClose, onSaved }) {
+// approve(payload): opened from the Activity Center to change a staff entry; Save approves it with these changes
+export function ReadingPopup({ reading = null, preset = {}, onClose, onSaved, approve = null }) {
   const { vehicles } = useMasters();
   const [form, setForm] = useState(() => (reading ? {
     vehicleId: idOf(reading.vehicleId),
@@ -59,9 +60,9 @@ export function ReadingPopup({ reading = null, preset = {}, onClose, onSaved }) 
     setSaving(true);
     try {
       const payload = { date: form.date, vehicleId: form.vehicleId, openingReading: openingNum, closingReading: closingNum, notes: form.notes };
-      const saved = reading ? await apiClient.put(`/meter-readings/${reading._id}`, payload) : await apiClient.post('/meter-readings', payload);
+      const saved = approve ? await approve(payload) : reading ? await apiClient.put(`/meter-readings/${reading._id}`, payload) : await apiClient.post('/meter-readings', payload);
       // A staff save with "save on approval" waits for the owner
-      toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : reading ? 'Reading updated' : 'Reading saved');
+      if (!approve) toast.success(saved?.pendingApproval ? 'Sent to the owner for approval' : reading ? 'Reading updated' : 'Reading saved');
       onSaved?.();
       onClose();
     } catch (error) {
@@ -74,7 +75,7 @@ export function ReadingPopup({ reading = null, preset = {}, onClose, onSaved }) 
 
   return (
     <FormPopup
-      title={reading ? 'Edit Meter Reading' : 'Add Meter Reading'}
+      submitLabel={approve ? 'Save & Approve' : 'Save'} title={approve ? 'Edit & Approve' : reading ? 'Edit Meter Reading' : 'Add Meter Reading'}
       subtitle="Opening and closing of the meter (km or hours). Services due are checked against it."
       onClose={onClose}
       onSubmit={handleSubmit}
