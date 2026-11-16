@@ -1,10 +1,12 @@
-import { Paperclip, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { Bell, BellOff, Paperclip, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { toggleAlerts } from '../utils/alertToggle';
 import { FILE_BASE_URL } from '../utils/api';
 import { daysLeftText, formatDate, formatRupees } from '../utils/format';
 import { STATUS_BADGES, getDocTypeLabel } from '../utils/constants';
 import { RowAction, TD, TH } from './ui';
 
-export default function DocumentTable({ docs, showVehicle = true, onEdit, onRenew, onDelete }) {
+// onAlertsChanged: called after a document's alert is stopped or switched back on
+export default function DocumentTable({ docs, showVehicle = true, onEdit, onRenew, onDelete, onAlertsChanged }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[820px] text-left">
@@ -30,7 +32,10 @@ export default function DocumentTable({ docs, showVehicle = true, onEdit, onRene
                 <p>{formatDate(doc.issueDate)} → <span className="font-semibold">{formatDate(doc.expiryDate)}</span></p>
                 {doc.status !== 'renewed' && <p className={doc.daysLeft < 0 ? 'font-semibold text-rose-700' : doc.status === 'due_soon' ? 'font-semibold text-amber-700' : 'text-slate-500'}>{daysLeftText(doc.daysLeft)}</p>}
               </td>
-              <td className={TD}><span className={STATUS_BADGES[doc.status]?.className}>{STATUS_BADGES[doc.status]?.label}</span></td>
+              <td className={TD}>
+                <span className={STATUS_BADGES[doc.status]?.className}>{STATUS_BADGES[doc.status]?.label}</span>
+                {doc.alertsOff && doc.status !== 'renewed' && <span className="badge-gray ml-1 inline-flex items-center gap-1"><BellOff size={11} /> Alert off</span>}
+              </td>
               <td className={`${TD} text-right`}>{doc.amount ? formatRupees(doc.amount) : '—'}</td>
               <td className={TD}>
                 <div className="flex justify-end">
@@ -40,6 +45,14 @@ export default function DocumentTable({ docs, showVehicle = true, onEdit, onRene
                     </a>
                   )}
                   {doc.status !== 'renewed' && <RowAction title="Renew" icon={RotateCcw} tone="emerald" onClick={() => onRenew(doc)} />}
+                  {doc.status !== 'renewed' && (
+                    <RowAction
+                      title={doc.alertsOff ? 'Switch alert back on' : 'Stop alert'}
+                      icon={doc.alertsOff ? Bell : BellOff}
+                      tone="amber"
+                      onClick={async () => (await toggleAlerts('documents', doc)) && onAlertsChanged?.()}
+                    />
+                  )}
                   <RowAction title="Edit" icon={Pencil} onClick={() => onEdit(doc)} />
                   <RowAction title="Delete" icon={Trash2} tone="rose" onClick={() => onDelete(doc)} />
                 </div>

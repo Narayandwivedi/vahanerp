@@ -384,10 +384,10 @@ const alerts = async (userId) => {
     .sort((a, b) => a.daysLeft - b.daysLeft);
   const isLive = (vehicle) => !vehicle || vehicle.status !== "sold";
   const documents = docs
-    .filter((doc) => ["expired", "due_soon"].includes(doc.status) && isLive(doc.vehicleId))
+    .filter((doc) => ["expired", "due_soon"].includes(doc.status) && isLive(doc.vehicleId) && !doc.alertsOff)
     .sort((a, b) => a.daysLeft - b.daysLeft);
   const maintenance = tasks
-    .filter((task) => task.status !== "ok" && isLive(task.vehicleId))
+    .filter((task) => task.status !== "ok" && isLive(task.vehicleId) && !task.alertsOff)
     .sort((a, b) => (a.status === b.status ? 0 : a.status === "overdue" ? -1 : 1));
   const lowStock = items.filter((item) => item.stockQty <= item.minStock);
   return {

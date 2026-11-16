@@ -118,7 +118,7 @@ export function DonePopup({ task, onClose, onSaved }) {
     setSaving(true);
     try {
       await apiClient.post(`/maintenance/${task._id}/done`, form);
-      toast.success('Service marked done');
+      toast.success('Serviced. The next reminder counts from here.');
       onSaved?.();
       onClose();
     } catch (error) {
@@ -129,7 +129,7 @@ export function DonePopup({ task, onClose, onSaved }) {
   };
 
   return (
-    <FormPopup title="Mark Service Done" subtitle={`${task.title} · ${task.vehicleId?.vehicleNo || ''}`} submitLabel="Done" maxWidth="max-w-xl" onClose={onClose} onSubmit={handleSubmit} submitDisabled={saving}>
+    <FormPopup title="Serviced" subtitle={`${task.title} · ${task.vehicleId?.vehicleNo || ''}`} submitLabel="Serviced" maxWidth="max-w-xl" onClose={onClose} onSubmit={handleSubmit} submitDisabled={saving}>
       <FormSection number={1} title="When" tone="blue">
         <FieldGrid cols={2}>
           <Field label="Date" required htmlFor="done-date">

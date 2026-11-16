@@ -127,7 +127,7 @@ export default function Documents() {
             <Segmented value={status} onChange={setStatus} options={[{ key: '', label: 'All' }, { key: 'expired', label: 'Expired' }, { key: 'due_soon', label: 'Expiring' }, { key: 'ok', label: 'Valid' }, { key: 'renewed', label: 'Old' }]} />
           </PanelHeader>
           {list.length === 0 ? <EmptyState title="No documents" /> : (
-            <DocumentTable docs={list} onEdit={setEditing} onRenew={renew} onDelete={handleDelete} />
+            <DocumentTable docs={list} onEdit={setEditing} onRenew={renew} onDelete={handleDelete} onAlertsChanged={refresh} />
           )}
         </section>
       )}

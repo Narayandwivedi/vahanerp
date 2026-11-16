@@ -3,11 +3,13 @@ const { Document } = require("../models");
 const crudRouter = require("../utils/crud");
 const upload = require("../config/upload");
 const { list, crudOptions } = require("../controllers/documentController");
+const { alertSwitch } = require("../utils/alertSwitch");
 
 // Vehicle documents, with an optional scanned file
 const router = express.Router();
 
 router.get("/", list);
+router.post("/:id/alerts", alertSwitch(Document));
 router.use("/", upload.single("file"), crudRouter(Document, crudOptions));
 
 module.exports = router;

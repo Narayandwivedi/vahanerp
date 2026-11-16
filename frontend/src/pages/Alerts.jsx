@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellOff, Droplet, FileWarning, IdCard, PackageX, Wrench } from 'lucide-react';
+import { BellOff, Check, Droplet, FileWarning, IdCard, PackageX, RefreshCw, Wrench } from 'lucide-react';
+import { toast } from 'react-toastify';
+import apiClient from '../utils/api';
 import { useAlerts } from '../context/AlertsContext';
 import { daysLeftText, formatDate, formatNumber, idOf } from '../utils/format';
 import { STATUS_BADGES, getDocTypeLabel } from '../utils/constants';
@@ -16,7 +18,7 @@ const AlertRow = ({ tone, title, detail, badge, action }) => (
       <p className="text-sm font-semibold text-slate-800">{title}</p>
       <p className="text-xs text-slate-500">{detail}</p>
     </div>
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {badge}
       {action}
     </div>
@@ -28,6 +30,23 @@ export default function Alerts() {
   const { alerts, reload } = useAlerts();
   const [renewing, setRenewing] = useState(null);
   const [servicing, setServicing] = useState(null);
+
+  // Stop the alerts of one document or service; it can be switched back on from Documents / Maintenance
+  const stopAlert = async (kind, row, name) => {
+    if (!window.confirm(`Stop alerts for ${name}? You will not be reminded about it again until you switch it back on.`)) return;
+    try {
+      await apiClient.post(`/${kind}/${row._id}/alerts`, { off: true });
+      toast.success('Alert stopped');
+      reload();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+  const stopButton = (onClick) => (
+    <button type="button" className="btn-secondary btn-sm" onClick={onClick} title="No more reminders for this one">
+      <BellOff size={14} /> Stop Alert
+    </button>
+  );
 
   if (!alerts) return <Page><Loading /></Page>;
   const { documents, maintenance, lowStock, licenses = [], lowMileage = [] } = alerts;
@@ -63,7 +82,12 @@ export default function Alerts() {
                 title={`${doc.vehicleId?.vehicleNo} · ${getDocTypeLabel(doc.docType)}`}
                 detail={`Expiry ${formatDate(doc.expiryDate)} · ${daysLeftText(doc.daysLeft)}${doc.provider ? ` · ${doc.provider}` : ''}`}
                 badge={<span className={STATUS_BADGES[doc.status].className}>{STATUS_BADGES[doc.status].label}</span>}
-                action={<button type="button" className="btn-primary btn-sm" onClick={() => setRenewing(doc)}>Renew</button>}
+                action={(
+                  <>
+                    <button type="button" className="btn-primary btn-sm" onClick={() => setRenewing(doc)} title="Enter the renewed document with its new expiry"><RefreshCw size={14} /> Renewed</button>
+                    {stopButton(() => stopAlert('documents', doc, `${doc.vehicleId?.vehicleNo} ${getDocTypeLabel(doc.docType)}`))}
+                  </>
+                )}
               />
             ))}
           </div>
@@ -87,7 +111,12 @@ export default function Alerts() {
                   task.dueDate ? `Due on ${formatDate(task.dueDate)}` : '',
                 ].filter(Boolean).join(' · ')}
                 badge={<span className={STATUS_BADGES[task.status].className}>{STATUS_BADGES[task.status].label}</span>}
-                action={<button type="button" className="btn-primary btn-sm" onClick={() => setServicing(task)}>Mark Done</button>}
+                action={(
+                  <>
+                    <button type="button" className="btn-primary btn-sm" onClick={() => setServicing(task)} title="Done: the next reminder counts from now"><Check size={14} /> Serviced</button>
+                    {stopButton(() => stopAlert('maintenance', task, `${task.vehicleId?.vehicleNo} ${task.title}`))}
+                  </>
+                )}
               />
             ))}
           </div>

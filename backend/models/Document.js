@@ -15,6 +15,8 @@ const documentSchema = new Schema(
     file: text,
     fileName: text,
     notes: text,
+    // "Stop alert": no more reminders for this document (renewing it is the other way to clear one)
+    alertsOff: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

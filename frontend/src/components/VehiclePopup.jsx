@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../utils/api';
 import useMasters from '../utils/useMasters';
@@ -32,12 +33,35 @@ const EMPTY = {
   meterUnit: 'km', capacityTons: '', openingKm: '', status: 'active', notes: '',
 };
 
+// A service reminder: every N km (or hours on an hour meter) and / or every N days
+const EMPTY_REMINDER = { title: 'Service', intervalKm: '', intervalDays: '' };
+// Warn a little before it falls due: a tenth of the gap, at most 500 km (or 50 hrs)
+const warnBefore = (interval, unit) => Math.min(unit === 'hrs' ? 50 : 500, Math.round(Number(interval || 0) / 10));
+const sameReminder = (a, b) => a.title.trim() === String(b.title || '').trim()
+  && Number(a.intervalKm || 0) === Number(b.intervalKm || 0) && Number(a.intervalDays || 0) === Number(b.intervalDays || 0);
+
 export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
   const { parties, reload: reloadParties } = useMasters();
   const [form, setForm] = useState(() => (vehicle ? { ...EMPTY, ...vehicle, ownerPartyId: idOf(vehicle.ownerPartyId) } : EMPTY));
   const [addingParty, setAddingParty] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  // Service reminders of this vehicle: a new vehicle starts with one row to fill; an edit loads its schedules
+  const [reminders, setReminders] = useState(() => (vehicle ? [] : [EMPTY_REMINDER]));
+  const [savedReminders, setSavedReminders] = useState([]);
+  useEffect(() => {
+    if (!vehicle) return;
+    apiClient.get('/maintenance', { params: { vehicleId: vehicle._id } })
+      .then((list) => {
+        const rows = Array.isArray(list) ? list : [];
+        setSavedReminders(rows);
+        setReminders(rows.map((row) => ({ _id: row._id, title: row.title, intervalKm: row.intervalKm || '', intervalDays: row.intervalDays || '' })));
+      })
+      .catch(() => {});
+  }, [vehicle]);
+  const setReminder = (index, field, value) => setReminders((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  // A row counts once it has a name and an interval
+  const filledReminder = (row) => row.title.trim() && (Number(row.intervalKm) > 0 || Number(row.intervalDays) > 0);
   const isHired = form.ownership === 'hired';
   const unit = meterUnitOf(form);
   const isMachinery = Boolean(form.isMachinery);
@@ -66,6 +90,21 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
       if (!vehicle && Number(form.openingKm) > 0) {
         await apiClient.post('/meter-readings', { vehicleId: saved._id, date: todayInput(), openingReading: form.openingKm, closingReading: form.openingKm, notes: 'Meter when added' });
       }
+      // Service reminders: new ones count from the meter now; changed ones are updated; removed ones deleted
+      const meterNow = vehicle ? Number(vehicle.currentKm || 0) : Number(form.openingKm || 0);
+      const kept = reminders.filter(filledReminder);
+      await Promise.all([
+        ...kept.map((row) => {
+          const body = {
+            vehicleId: saved._id, title: row.title.trim(), intervalKm: Number(row.intervalKm) || 0, intervalDays: Number(row.intervalDays) || 0,
+            alertBeforeKm: warnBefore(row.intervalKm, unit), alertBeforeDays: Number(row.intervalDays) > 0 ? Math.min(7, Math.round(Number(row.intervalDays) / 10) || 1) : 7,
+          };
+          const before = savedReminders.find((item) => item._id === row._id);
+          if (!before) return apiClient.post('/maintenance', { ...body, lastDoneKm: meterNow, lastDoneDate: todayInput() });
+          return sameReminder(row, before) ? null : apiClient.put(`/maintenance/${row._id}`, { ...body, lastDoneKm: before.lastDoneKm, lastDoneDate: before.lastDoneDate });
+        }),
+        ...savedReminders.filter((item) => !kept.some((row) => row._id === item._id)).map((item) => apiClient.delete(`/maintenance/${item._id}`)),
+      ]);
       toast.success(vehicle ? 'Vehicle updated' : 'Vehicle added');
       onSaved?.(saved);
       onClose();
@@ -156,7 +195,49 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
         </FormSection>
         )}
 
-        <FormSection number={(isHired ? 3 : 2) + (isMachinery ? 0 : 1)} title="Details" tone="slate">
+        {/* Service reminders: an alert every N km / hours or N days, starting from the meter now */}
+        <FormSection
+          number={(isHired ? 3 : 2) + (isMachinery ? 0 : 1)}
+          title="Service Reminder"
+          tone="amber"
+          hint={`Get an alert every so many ${unit === 'hrs' ? 'hours' : 'km'} or days, e.g. every ${unit === 'hrs' ? '200 hrs' : '5000 km'}. Mark it Serviced from Alerts and it starts again.`}
+          action={<AddLink onClick={() => setReminders((prev) => [...prev, { ...EMPTY_REMINDER, title: '' }])}>Add Reminder</AddLink>}
+        >
+          {reminders.length === 0 ? (
+            <button type="button" onClick={() => setReminders([EMPTY_REMINDER])} className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-amber-300 bg-white/60 px-3 py-2.5 text-sm font-semibold text-amber-700 hover:bg-white">
+              <Plus size={15} /> Add a service reminder
+            </button>
+          ) : (
+            <div className="space-y-2">
+              {reminders.map((row, index) => (
+                <div key={row._id || `new-${index}`} className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <Field label="Service" className="col-span-2 sm:col-span-1">
+                    <input className="input" value={row.title} onChange={(event) => setReminder(index, 'title', event.target.value)} placeholder="Service, Oil change, Greasing…" maxLength={60} />
+                  </Field>
+                  <Field label="Every">
+                    <MoneyInput prefix="" suffix={unit} value={row.intervalKm} onChange={(value) => setReminder(index, 'intervalKm', value)} placeholder={unit === 'hrs' ? '200' : '5000'} />
+                  </Field>
+                  <Field label="Or every">
+                    <MoneyInput prefix="" suffix="days" value={row.intervalDays} onChange={(value) => setReminder(index, 'intervalDays', value)} placeholder="Optional" />
+                  </Field>
+                  <button
+                    type="button"
+                    onClick={() => setReminders((prev) => prev.filter((_, i) => i !== index))}
+                    aria-label="Remove reminder"
+                    className="col-span-2 mb-0.5 flex h-10 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 sm:col-span-1 sm:w-10"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              <p className="text-[11px] text-slate-500">
+                {vehicle ? 'A new reminder counts from the meter now' : 'Counts from the opening meter above'}; you get a warning a little before it is due.
+              </p>
+            </div>
+          )}
+        </FormSection>
+
+        <FormSection number={(isHired ? 4 : 3) + (isMachinery ? 0 : 1)} title="Details" tone="slate">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
             {!isMachinery && (
               <Field label="Capacity">

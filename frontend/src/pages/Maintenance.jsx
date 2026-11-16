@@ -59,7 +59,7 @@ export default function Maintenance() {
         {loading && !all.length ? <Loading /> : list.length === 0 ? (
           <EmptyState title="No service schedules" hint="Add oil change, service, greasing… for each vehicle. Keep meter readings up to date." />
         ) : (
-          <MaintenanceTable tasks={list} onDone={setDone} onEdit={setEditing} onDelete={handleDelete} />
+          <MaintenanceTable tasks={list} onDone={setDone} onEdit={setEditing} onDelete={handleDelete} onAlertsChanged={refresh} />
         )}
       </section>
 

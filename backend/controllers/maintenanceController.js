@@ -20,6 +20,8 @@ const markDone = async (req, res) => {
   task.lastDoneDate = date;
   if (km) task.lastDoneKm = km;
   task.history.push({ date, km, cost, notes: req.body.notes || "" });
+  // Serviced: the reminder counts again from here, even if its alert had been stopped
+  task.alertsOff = false;
   await task.save();
   if (cost > 0) {
     await Expense.create({

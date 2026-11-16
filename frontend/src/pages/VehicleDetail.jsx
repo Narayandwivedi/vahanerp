@@ -4,6 +4,7 @@ import { FileBadge, Gauge, IndianRupee, Pencil, Plus, Route, TrendingUp, Wallet,
 import { toast } from 'react-toastify';
 import apiClient from '../utils/api';
 import useFetch from '../utils/useFetch';
+import { useAlerts } from '../context/AlertsContext';
 import { currentMonthInput, formatDate, formatMonth, formatNumber, formatRupees, monthBounds } from '../utils/format';
 import { describeCharge, getBasisLabel, getBasisUnit, getCategoryLabel } from '../utils/constants';
 import StatCard from '../components/StatCard';
@@ -53,6 +54,7 @@ export default function VehicleDetail() {
   const { data: contracts } = useFetch('/contracts', { vehicleId: id, month }, []);
   const { data: docs, reload: reloadDocs } = useFetch('/documents', { vehicleId: id }, []);
   const { data: tasks, reload: reloadTasks } = useFetch('/maintenance', { vehicleId: id }, []);
+  const { reload: reloadAlerts } = useAlerts();
   const { data: readings, reload: reloadReadings } = useFetch('/meter-readings', { vehicleId: id }, []);
 
   const reloadAll = () => {
@@ -222,6 +224,7 @@ export default function VehicleDetail() {
             onEdit={(doc) => setPopup({ type: 'document', record: doc })}
             onRenew={(doc) => setPopup({ type: 'document', preset: { vehicleId: id, docType: doc.docType, provider: doc.provider } })}
             onDelete={(doc) => remove(`/documents/${doc._id}`, 'document')}
+            onAlertsChanged={() => { reloadDocs(); reloadAlerts?.(); }}
           />
         ))}
 
@@ -232,6 +235,7 @@ export default function VehicleDetail() {
             onDone={(task) => setPopup({ type: 'done', record: task })}
             onEdit={(task) => setPopup({ type: 'schedule', record: task })}
             onDelete={(task) => remove(`/maintenance/${task._id}`, 'schedule')}
+            onAlertsChanged={() => { reloadTasks(); reloadAlerts?.(); }}
           />
         ))}
 

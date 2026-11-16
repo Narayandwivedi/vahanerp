@@ -1,4 +1,5 @@
-import { CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+import { Bell, BellOff, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+import { toggleAlerts } from '../utils/alertToggle';
 import { formatDate } from '../utils/format';
 import { formatMeter } from '../utils/meter';
 import { STATUS_BADGES } from '../utils/constants';
@@ -16,7 +17,8 @@ const dayText = (task) => {
 };
 
 // Service schedules with what is left before each falls due
-export default function MaintenanceTable({ tasks, showVehicle = true, onDone, onEdit, onDelete }) {
+// onAlertsChanged: called after a schedule's alert is stopped or switched back on
+export default function MaintenanceTable({ tasks, showVehicle = true, onDone, onEdit, onDelete, onAlertsChanged }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[820px] text-left">
@@ -52,10 +54,19 @@ export default function MaintenanceTable({ tasks, showVehicle = true, onDone, on
                 {task.dueKm !== null && <p>{formatMeter(task.dueKm, task.vehicleId)} · <span className={task.kmLeft <= 0 ? 'font-semibold text-rose-700' : 'text-slate-500'}>{kmText(task)}</span></p>}
                 {task.dueDate && <p>{formatDate(task.dueDate)} · <span className={task.daysLeft < 0 ? 'font-semibold text-rose-700' : 'text-slate-500'}>{dayText(task)}</span></p>}
               </td>
-              <td className={TD}><span className={STATUS_BADGES[task.status]?.className}>{STATUS_BADGES[task.status]?.label}</span></td>
+              <td className={TD}>
+                <span className={STATUS_BADGES[task.status]?.className}>{STATUS_BADGES[task.status]?.label}</span>
+                {task.alertsOff && <span className="badge-gray ml-1 inline-flex items-center gap-1"><BellOff size={11} /> Alert off</span>}
+              </td>
               <td className={TD}>
                 <div className="flex justify-end">
-                  <RowAction title="Mark done" icon={CheckCircle2} tone="emerald" onClick={() => onDone(task)} />
+                  <RowAction title="Serviced" icon={CheckCircle2} tone="emerald" onClick={() => onDone(task)} />
+                  <RowAction
+                    title={task.alertsOff ? 'Switch alert back on' : 'Stop alert'}
+                    icon={task.alertsOff ? Bell : BellOff}
+                    tone="amber"
+                    onClick={async () => (await toggleAlerts('maintenance', task)) && onAlertsChanged?.()}
+                  />
                   <RowAction title="Edit" icon={Pencil} onClick={() => onEdit(task)} />
                   <RowAction title="Delete" icon={Trash2} tone="rose" onClick={() => onDelete(task)} />
                 </div>

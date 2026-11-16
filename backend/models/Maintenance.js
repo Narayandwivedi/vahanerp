@@ -23,6 +23,8 @@ const maintenanceSchema = new Schema(
       },
     ],
     notes: text,
+    // "Stop alert": the reminder is paused until switched back on (marking it serviced also restarts it)
+    alertsOff: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
