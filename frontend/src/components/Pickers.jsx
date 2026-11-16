@@ -85,14 +85,20 @@ function SearchSelect({
     if (openSignal > 0) setOpen(true);
   }, [openSignal]);
 
-  // A click anywhere else closes it
+  // A click anywhere else closes it (a "New Vehicle" link, another field…). Listened for on the way down,
+  // because a popup stops clicks inside it from reaching the page and the list would otherwise stay open
+  // on top of the next popup.
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (event) => {
       if (!boxRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) close();
     };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('touchstart', onDown, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown, true);
+      document.removeEventListener('touchstart', onDown, true);
+    };
   }, [open]);
 
   // Place the list under the field (or over it, with coverField); on a short screen it opens upward
