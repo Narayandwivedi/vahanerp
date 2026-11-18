@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Monitor, Moon, Save, Sun } from 'lucide-react';
+import { CheckCircle2, Download, LogOut, Monitor, Moon, Save, Sun } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../utils/api';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,21 @@ import ExpenseTypeSettings from '../components/ExpenseTypeSettings';
 import StaffSettings from '../components/StaffSettings';
 import Segmented from '../components/Segmented';
 import { Field, MoneyInput, Page, PageHeader } from '../components/ui';
+import usePwaInstall from '../hooks/usePwaInstall';
+import { isAppInstalled } from '../utils/pwaInstall';
+
+// Steps to install by hand, for when the browser has not offered (or no longer offers) its install popup
+const manualInstallSteps = () => {
+  const agent = navigator.userAgent || '';
+  const isIos = /iPad|iPhone|iPod/.test(agent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIos) {
+    return ['Open this page in Safari', 'Tap the Share button (square with an arrow)', 'Tap "Add to Home Screen", then "Add"'];
+  }
+  if (/Android/i.test(agent)) {
+    return ['Open this page in Chrome', 'Tap the ⋮ menu at the top right', 'Tap "Install app" or "Add to Home screen"'];
+  }
+  return ['Open this page in Chrome or Edge', 'Click the install icon at the right end of the address bar, or open the ⋮ / … menu', 'Choose "Install VahanERP" (in Edge: Apps → Install this site as an app)'];
+};
 
 export default function Settings() {
   const { user, setUser, logout } = useAuth();
@@ -29,6 +44,17 @@ export default function Settings() {
   }));
   const [saving, setSaving] = useState(false);
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  const { installable, install } = usePwaInstall();
+  const [installed, setInstalled] = useState(isAppInstalled);
+  const [showInstallSteps, setShowInstallSteps] = useState(false);
+
+  const handleInstallApp = async () => {
+    if (!installable) {
+      setShowInstallSteps(true);
+      return;
+    }
+    if (await install()) setInstalled(true);
+  };
 
   const changeTheme = (value) => {
     setTheme(value);
@@ -104,6 +130,33 @@ export default function Settings() {
           <button type="submit" className="btn-primary px-8" disabled={saving}><Save size={16} /> Save Settings</button>
         </div>
       </form>
+
+      {/* Install App: for when the browser's own install popup was missed or closed */}
+      <section className="card mt-3 max-w-5xl">
+        <div className="flex items-center gap-3">
+          <img src="/icon-192.png" alt="" className="h-10 w-10 shrink-0 rounded-xl object-contain" />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-bold text-slate-900">Install App</h2>
+            <p className="text-xs text-slate-500">Open VahanERP from your home screen or desktop like an app.</p>
+          </div>
+          {installed ? (
+            <span className="badge-green inline-flex shrink-0 items-center gap-1"><CheckCircle2 size={13} /> Installed</span>
+          ) : (
+            <button type="button" className="btn-primary inline-flex shrink-0 items-center gap-1.5 px-4" onClick={handleInstallApp}>
+              <Download size={15} /> Download App
+            </button>
+          )}
+        </div>
+        {!installed && showInstallSteps && (
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className="text-xs font-semibold text-slate-700">This browser did not open its install popup. Install it by hand:</p>
+            <ol className="mt-1.5 list-decimal space-y-0.5 pl-5 text-xs text-slate-600">
+              {manualInstallSteps().map((step) => <li key={step}>{step}</li>)}
+            </ol>
+            <p className="mt-1.5 text-[11px] text-slate-400">If VahanERP is already installed on this device, open it from your home screen or apps list.</p>
+          </div>
+        )}
+      </section>
 
       {/* The owner's expense types: vehicle, trip or office spends */}
       <ExpenseTypeSettings />
