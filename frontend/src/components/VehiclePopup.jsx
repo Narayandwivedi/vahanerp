@@ -171,7 +171,7 @@ export default function VehiclePopup({ vehicle = null, onClose, onSaved }) {
                 <PartySelect parties={parties} value={form.ownerPartyId} onChange={(value) => set('ownerPartyId', value)} prefer={['supplier']} required />
               </Field>
               <Field label="Pay Owner">
-                <OptionSelect options={hireOptions} value={form.hireBasis} onChange={(value) => set('hireBasis', value)} allowEmpty emptyLabel="Monthly / no fixed rate" />
+                <OptionSelect options={hireOptions} value={form.hireBasis} onChange={(value) => set('hireBasis', value)} allowEmpty emptyLabel="No fixed rate" />
               </Field>
               {form.hireBasis && (
                 <Field label="Rate">

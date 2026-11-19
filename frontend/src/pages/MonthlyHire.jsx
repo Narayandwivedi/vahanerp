@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, CircleStop, Pencil, Plus, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, CircleStop, NotebookPen, Pencil, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../utils/api';
 import useFetch from '../utils/useFetch';
@@ -9,6 +9,7 @@ import StatCard from '../components/StatCard';
 import Segmented from '../components/Segmented';
 import MonthFilter from '../components/MonthFilter';
 import ContractPopup from '../components/ContractPopup';
+import HireLogPopup from '../components/HireLogPopup';
 import { EmptyState, ErrorBox, Loading, Page, PageHeader, PanelHeader, RowAction, TD, TH } from '../components/ui';
 
 export default function MonthlyHire() {
@@ -16,6 +17,7 @@ export default function MonthlyHire() {
   const [direction, setDirection] = useState('');
   const [editing, setEditing] = useState(null);
   const [open, setOpen] = useState('');
+  const [logging, setLogging] = useState(null);
   const { data: contracts, loading, error, reload } = useFetch('/contracts', { month }, []);
 
   const all = contracts || [];
@@ -128,10 +130,14 @@ export default function MonthlyHire() {
                         <p className="whitespace-nowrap text-xs">{formatDate(contract.startDate)} → {contract.endDate ? formatDate(contract.endDate) : 'running'}</p>
                         <span className={STATUS_BADGES[contract.status]?.className}>{STATUS_BADGES[contract.status]?.label}</span>
                       </td>
-                      <td className={`${TD} text-right font-semibold ${contract.direction === 'hire_in' ? 'text-rose-700' : 'text-emerald-700'}`}>{formatRupees(contract.monthAmount)}</td>
+                      <td className={`${TD} text-right`}>
+                        <p className={`font-semibold ${contract.direction === 'hire_in' ? 'text-rose-700' : 'text-emerald-700'}`}>{formatRupees(contract.monthAmount)}</p>
+                        {contract.monthOffDays > 0 && <p className="whitespace-nowrap text-[11px] text-slate-500">{contract.monthOffDays} off · −{formatRupees(contract.monthOffAmount)}</p>}
+                      </td>
                       <td className={`${TD} text-right`}>{formatRupees(contract.accruedTillToday)}</td>
                       <td className={TD}>
                         <div className="flex justify-end">
+                          <RowAction title="Daily log: off days, odometer, fuel" icon={NotebookPen} tone="emerald" onClick={() => setLogging(contract)} />
                           {contract.status !== 'ended' && <RowAction title="Stop hire" icon={CircleStop} tone="amber" onClick={() => stopToday(contract)} />}
                           <RowAction title="Edit" icon={Pencil} onClick={() => setEditing(contract)} />
                           <RowAction title="Delete" icon={Trash2} tone="rose" onClick={() => handleDelete(contract)} />
@@ -148,7 +154,8 @@ export default function MonthlyHire() {
                             {contract.months.map((segment) => (
                               <div key={segment.from} className="rounded-lg bg-white px-3 py-2 text-xs ring-1 ring-slate-200">
                                 <p className="font-semibold text-slate-700">{formatDate(segment.from)} – {formatDate(segment.to)}</p>
-                                <p className="text-slate-500">{segment.days}/{segment.daysInMonth} days · <span className="font-semibold text-slate-800">{formatRupees(segment.amount)}</span></p>
+                                <p className="text-slate-500">{segment.days - segment.offDays}/{segment.daysInMonth} days · <span className="font-semibold text-slate-800">{formatRupees(segment.amount)}</span></p>
+                                {segment.offDays > 0 && <p className="text-rose-600">{segment.offDays} off · −{formatRupees(segment.offAmount)}</p>}
                               </div>
                             ))}
                           </div>
@@ -164,6 +171,7 @@ export default function MonthlyHire() {
         )}
       </section>
 
+      {logging && <HireLogPopup contract={logging} month={month} onClose={() => setLogging(null)} onChanged={reload} />}
       {editing && <ContractPopup contract={editing._id ? editing : null} direction={editing.direction} onClose={() => setEditing(null)} onSaved={reload} />}
     </Page>
   );

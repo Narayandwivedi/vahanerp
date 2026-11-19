@@ -50,8 +50,10 @@ const nextNumber = async (userId, key, prefix) => {
 /**
  * Monthly rent split into calendar-month pieces between two days (both counted).
  * A part month is charged for the days used: rate × days ÷ days in that month.
+ * Days logged as "off" (vehicle not running) are taken out the same way: rate × off days ÷ days in that month.
  */
 const contractSegments = (contract, from, to) => {
+  const offDays = new Set((contract.dailyLog || []).filter((log) => log.status === "off").map((log) => dayNum(log.date)));
   const start = Math.max(dayNum(contract.startDate), from ? dayNum(from) : -Infinity);
   const end = Math.min(contract.endDate ? dayNum(contract.endDate) : Infinity, to ? dayNum(to) : todayNum());
   const segments = [];
@@ -63,12 +65,19 @@ const contractSegments = (contract, from, to) => {
     const segmentEnd = Math.min(end, monthEnd);
     const days = segmentEnd - cursor + 1;
     const daysInMonth = monthEnd - monthStart + 1;
+    let off = 0;
+    offDays.forEach((day) => {
+      if (day >= cursor && day <= segmentEnd) off += 1;
+    });
+    const rate = toNumber(contract.monthlyRate);
     segments.push({
       from: fromDayNum(cursor),
       to: fromDayNum(segmentEnd),
       days,
       daysInMonth,
-      amount: round2((toNumber(contract.monthlyRate) * days) / daysInMonth),
+      offDays: off,
+      offAmount: round2((rate * off) / daysInMonth),
+      amount: round2((rate * (days - off)) / daysInMonth),
     });
     cursor = segmentEnd + 1;
   }
