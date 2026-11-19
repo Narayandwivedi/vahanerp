@@ -13,12 +13,14 @@ const expenseSchema = new Schema(
     mode: { type: String, enum: ["cash", "bank", "upi", "credit"], default: "cash" },
     notes: text,
     // inventory: made by issuing stock to the vehicle; it is changed through that issue, not on its own
-    source: { type: String, enum: ["manual", "inventory", "maintenance", "payroll", "trip", "diesel"], default: "manual" },
+    source: { type: String, enum: ["manual", "inventory", "maintenance", "payroll", "trip", "diesel", "breakdown"], default: "manual" },
     inventoryTxnId: ref("InventoryTxn"),
     // diesel: a diesel purchase at a pump; it is changed through that entry
     dieselEntryId: ref("DieselEntry"),
     // trip: a spend entered on a trip; it is changed through that trip
     tripId: ref("Trip"),
+    // breakdown: a repair cost of a breakdown; it is changed through that breakdown
+    breakdownId: ref("Breakdown"),
     // payroll: salary / advance / bata paid to an employee; it is changed in Payroll
     payrollEntryId: ref("PayrollEntry"),
   },

@@ -1,5 +1,5 @@
 const { summarizer } = require("../utils/activity");
-const { Expense, Employee, DieselEntry } = require("../models");
+const { Expense, Employee, DieselEntry, Breakdown } = require("../models");
 const { round2, toNumber, idOf, lineAmount, routeKey } = require("../utils/common");
 const { refuse, ownVehicle } = require("../utils/guards");
 const { refreshVehicleKm } = require("../utils/stock");
@@ -136,6 +136,8 @@ const crudOptions = {
     await Expense.deleteMany({ userId: req.userId, tripId: doc._id });
     // Diesel filled for this trip stays, now without a trip
     await DieselEntry.updateMany({ userId: req.userId, tripId: doc._id }, { $set: { tripId: null } });
+    // A breakdown on this trip stays marked "on a trip", now without the trip
+    await Breakdown.updateMany({ userId: req.userId, tripId: doc._id }, { $set: { tripId: null } });
     await refreshVehicleKm(req.userId, doc.vehicleId);
   },
 };

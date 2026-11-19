@@ -1,4 +1,4 @@
-const { Vehicle, Trip, MeterReading, InventoryItem, InventoryTxn, Expense, Maintenance } = require("../models");
+const { Vehicle, Trip, MeterReading, InventoryItem, InventoryTxn, Expense, Maintenance, Breakdown } = require("../models");
 const { round2, toNumber } = require("./common");
 
 // A vehicle's odometer is the highest reading seen anywhere: meter readings, trip end km, stock fitted, expenses
@@ -10,14 +10,18 @@ const refreshVehicleKm = async (userId, vehicleId) => {
     InventoryTxn.findOne({ userId, vehicleId }).sort({ odometer: -1 }).select("odometer").lean(),
     Expense.findOne({ userId, vehicleId }).sort({ odometer: -1 }).select("odometer").lean(),
   ]);
-  const maintenance = await Maintenance.findOne({ userId, vehicleId }).sort({ lastDoneKm: -1 }).select("lastDoneKm").lean();
+  const [maintenance, breakdown] = await Promise.all([
+    Maintenance.findOne({ userId, vehicleId }).sort({ lastDoneKm: -1 }).select("lastDoneKm").lean(),
+    Breakdown.findOne({ userId, vehicleId }).sort({ odometer: -1 }).select("odometer").lean(),
+  ]);
   const currentKm = Math.max(
     0,
     toNumber(meter?.reading),
     toNumber(trip?.endKm),
     toNumber(issue?.odometer),
     toNumber(expense?.odometer),
-    toNumber(maintenance?.lastDoneKm)
+    toNumber(maintenance?.lastDoneKm),
+    toNumber(breakdown?.odometer)
   );
   await Vehicle.updateOne({ _id: vehicleId, userId }, { $set: { currentKm } });
 };

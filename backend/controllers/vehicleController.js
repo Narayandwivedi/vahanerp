@@ -1,4 +1,4 @@
-const { Trip, Contract, Expense, MeterReading, Maintenance, Document, Employee } = require("../models");
+const { Trip, Contract, Expense, MeterReading, Maintenance, Document, Employee, Breakdown } = require("../models");
 const { toNumber, routeKey } = require("../utils/common");
 const { refuse, usedBy } = require("../utils/guards");
 
@@ -37,6 +37,7 @@ const crudOptions = {
     [Trip, { userId: req.userId, vehicleId: doc._id }, "trips"],
     [Contract, { userId: req.userId, vehicleId: doc._id }, "monthly hire"],
     [Expense, { userId: req.userId, vehicleId: doc._id }, "expenses"],
+    [Breakdown, { userId: req.userId, vehicleId: doc._id }, "breakdowns"],
   ]),
   afterDelete: async (req, doc) => {
     await Promise.all([

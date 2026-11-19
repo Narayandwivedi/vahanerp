@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Bell, Route, CalendarClock, Wallet, Package, Gauge, Wrench, FileBadge,
-  Calculator, FileText, Users, Truck, HandCoins, Settings, X, IdCard, UserRound, Boxes, Fuel, Droplet, ListChecks, ClipboardList,
+  Calculator, FileText, Users, Truck, HandCoins, Settings, X, IdCard, UserRound, Boxes, Fuel, Droplet, ListChecks, ClipboardList, CarFront,
 } from 'lucide-react';
 import Logo from './Logo';
 import { useAuth } from '../context/AuthContext';
@@ -36,6 +36,7 @@ const navGroups = [
       { to: '/meter-readings', icon: Gauge, label: 'Meter Reading' },
       { to: '/mileage', icon: Droplet, label: 'Mileage' },
       { to: '/maintenance', icon: Wrench, label: 'Maintenance' },
+      { to: '/breakdowns', icon: CarFront, label: 'Breakdowns' },
       { to: '/documents', icon: FileBadge, label: 'Documents' },
     ],
   },

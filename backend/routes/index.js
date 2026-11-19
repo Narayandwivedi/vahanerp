@@ -23,6 +23,7 @@ router.use("/purchases", require("./purchaseRoutes"));
 router.use("/diesel-entries", require("./dieselRoutes"));
 router.use("/meter-readings", require("./meterReadingRoutes"));
 router.use("/maintenance", require("./maintenanceRoutes"));
+router.use("/breakdowns", require("./breakdownRoutes"));
 router.use("/documents", require("./documentRoutes"));
 router.use("/quotations", require("./quotationRoutes"));
 router.use("/payroll", require("./payrollRoutes"));

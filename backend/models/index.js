@@ -16,6 +16,7 @@ const Purchase = require("./Purchase");
 const DieselEntry = require("./DieselEntry");
 const MeterReading = require("./MeterReading");
 const Maintenance = require("./Maintenance");
+const Breakdown = require("./Breakdown");
 const Document = require("./Document");
 const Quotation = require("./Quotation");
 const Employee = require("./Employee");
@@ -44,6 +45,7 @@ module.exports = {
   DieselEntry,
   MeterReading,
   Maintenance,
+  Breakdown,
   Document,
   Quotation,
   Employee,

@@ -24,6 +24,7 @@ const crudOptions = {
     data.source = "manual";
     data.inventoryTxnId = null;
     data.tripId = null;
+    data.breakdownId = null;
     return data;
   },
   canChange: (doc) => ({
@@ -31,6 +32,7 @@ const crudOptions = {
     payroll: "This expense is a salary / advance / bata payment. Change or delete it in Payroll.",
     trip: "This expense was added on a trip. Change or delete it in that trip.",
     diesel: "This expense is a diesel purchase. Change or delete it in Diesel.",
+    breakdown: "This expense is a breakdown repair cost. Change or delete it in Breakdowns.",
   })[doc.source] || "",
   afterSave: (req, doc) => refreshVehicleKm(req.userId, doc.vehicleId),
   afterDelete: (req, doc) => refreshVehicleKm(req.userId, doc.vehicleId),

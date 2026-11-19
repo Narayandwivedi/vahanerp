@@ -16,6 +16,7 @@ import Diesel from './pages/Diesel';
 import MeterReadings from './pages/MeterReadings';
 import Mileage from './pages/Mileage';
 import Maintenance from './pages/Maintenance';
+import Breakdowns from './pages/Breakdowns';
 import Documents from './pages/Documents';
 import Calculator from './pages/Calculator';
 import Quotations from './pages/Quotations';
@@ -65,6 +66,7 @@ export default function App() {
         <Route path="/meter-readings" element={<MeterReadings />} />
         <Route path="/mileage" element={<Mileage />} />
         <Route path="/maintenance" element={<Maintenance />} />
+        <Route path="/breakdowns" element={<Breakdowns />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/calculator" element={<Calculator />} />
         <Route path="/quotations" element={<Quotations />} />

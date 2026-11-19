@@ -1,4 +1,4 @@
-const { Trip, Contract, Payment, Vehicle, Purchase, DieselEntry } = require("../models");
+const { Trip, Contract, Payment, Vehicle, Purchase, DieselEntry, Breakdown } = require("../models");
 const { usedBy } = require("../utils/guards");
 
 // Customers (I bill them) and suppliers (I pay them: vehicle owners, petrol pumps, tyres, parts)
@@ -17,6 +17,7 @@ const crudOptions = {
     [Vehicle, { userId: req.userId, ownerPartyId: doc._id }, "vehicles"],
     [Purchase, { userId: req.userId, partyId: doc._id }, "purchases"],
     [DieselEntry, { userId: req.userId, partyId: doc._id }, "diesel purchases"],
+    [Breakdown, { userId: req.userId, workshopPartyId: doc._id }, "breakdown repairs"],
   ]),
 };
 

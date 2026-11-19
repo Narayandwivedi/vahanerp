@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { FileBadge, Gauge, IndianRupee, Pencil, Plus, Route, TrendingUp, Wallet, Wrench } from 'lucide-react';
+import { CarFront, FileBadge, Gauge, IndianRupee, Pencil, Plus, Route, TrendingUp, Wallet, Wrench } from 'lucide-react';
 import { toast } from 'react-toastify';
 import apiClient from '../utils/api';
 import useFetch from '../utils/useFetch';
@@ -18,6 +18,9 @@ import DocumentTable from '../components/DocumentTable';
 import MaintenanceTable from '../components/MaintenanceTable';
 import { DonePopup, ScheduleForm } from '../components/MaintenancePopups';
 import { ReadingPopup } from './MeterReadings';
+import BreakdownPopup from '../components/BreakdownPopup';
+import BreakdownTable from '../components/BreakdownTable';
+import { formatDowntime, summarizeBreakdowns } from '../utils/breakdown';
 import { closingOf, formatMeter, meterUnitOf, openingOf, runOf } from '../utils/meter';
 import { EmptyState, ErrorBox, Loading, Page, PageHeader, TD, TH } from '../components/ui';
 
@@ -26,6 +29,7 @@ const TABS = [
   { key: 'expenses', label: 'Expenses', icon: Wallet },
   { key: 'documents', label: 'Documents', icon: FileBadge },
   { key: 'maintenance', label: 'Maintenance', icon: Wrench },
+  { key: 'breakdowns', label: 'Breakdowns', icon: CarFront },
   { key: 'meter', label: 'Meter', icon: Gauge },
 ];
 
@@ -56,6 +60,8 @@ export default function VehicleDetail() {
   const { data: tasks, reload: reloadTasks } = useFetch('/maintenance', { vehicleId: id }, []);
   const { reload: reloadAlerts } = useAlerts();
   const { data: readings, reload: reloadReadings } = useFetch('/meter-readings', { vehicleId: id }, []);
+  // Breakdown history: every breakdown of this vehicle, not only this month's
+  const { data: breakdowns, reload: reloadBreakdowns } = useFetch('/breakdowns', { vehicleId: id }, []);
 
   const reloadAll = () => {
     reloadVehicle();
@@ -65,6 +71,7 @@ export default function VehicleDetail() {
     reloadDocs();
     reloadTasks();
     reloadReadings();
+    reloadBreakdowns();
   };
 
   if (error) return <Page><ErrorBox message={error} /></Page>;
@@ -90,6 +97,7 @@ export default function VehicleDetail() {
     documents: { label: 'Add Document', open: () => setPopup({ type: 'document', preset: { vehicleId: id } }) },
     maintenance: { label: 'Add Schedule', open: () => setPopup({ type: 'schedule' }) },
     meter: { label: 'Add Reading', open: () => setPopup({ type: 'reading' }) },
+    breakdowns: { label: 'Add Breakdown', open: () => setPopup({ type: 'breakdown' }) },
   }[tab];
 
   return (
@@ -206,7 +214,7 @@ export default function VehicleDetail() {
                     <td className={TD}>{[expense.paidTo, expense.notes].filter(Boolean).join(' · ') || '—'}</td>
                     <td className={`${TD} text-right font-semibold text-rose-700`}>{formatRupees(expense.amount)}</td>
                     <td className={`${TD} text-right`}>
-                      {!['inventory', 'payroll'].includes(expense.source) && (
+                      {!['inventory', 'payroll', 'breakdown'].includes(expense.source) && (
                         <button type="button" className="icon-btn p-1.5" onClick={() => setPopup({ type: 'expense', record: expense })} aria-label="Edit"><Pencil size={16} /></button>
                       )}
                     </td>
@@ -239,6 +247,22 @@ export default function VehicleDetail() {
           />
         ))}
 
+        {tab === 'breakdowns' && ((breakdowns || []).length === 0 ? <EmptyState title="No breakdowns recorded" hint="Every breakdown of this vehicle shows here" /> : (() => {
+          const history = summarizeBreakdowns(breakdowns);
+          return (
+            <>
+              <div className="flex flex-wrap gap-x-5 gap-y-1 border-b border-slate-200 px-5 py-3 text-sm">
+                <span><span className="text-slate-500">Breakdowns</span> <b>{history.count}</b>{history.onTrip ? <span className="text-slate-500"> ({history.onTrip} on trips)</span> : ''}</span>
+                <span><span className="text-slate-500">Total cost</span> <b className="text-rose-700">{formatRupees(history.cost)}</b></span>
+                <span><span className="text-slate-500">Downtime</span> <b>{formatDowntime(history.hours)}</b></span>
+                {history.topCause && <span><span className="text-slate-500">Most common</span> <b>{history.topCause}</b></span>}
+                {history.open > 0 && <span className="badge-red">{history.open} not repaired</span>}
+              </div>
+              <BreakdownTable rows={breakdowns} showVehicle={false} onEdit={(row) => setPopup({ type: 'breakdown', record: row })} onDelete={(row) => remove(`/breakdowns/${row._id}`, 'breakdown')} />
+            </>
+          );
+        })())}
+
         {tab === 'meter' && ((readings || []).length === 0 ? <EmptyState title="No readings yet" /> : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-left">
@@ -265,6 +289,7 @@ export default function VehicleDetail() {
       {popup?.type === 'document' && <DocumentPopup doc={popup.record} preset={popup.preset || {}} onClose={() => setPopup(null)} onSaved={reloadAll} />}
       {popup?.type === 'schedule' && <ScheduleForm task={popup.record} preset={{ vehicleId: id, lastDoneKm: vehicle.currentKm || '' }} onClose={() => setPopup(null)} onSaved={reloadAll} />}
       {popup?.type === 'done' && <DonePopup task={popup.record} onClose={() => setPopup(null)} onSaved={reloadAll} />}
+      {popup?.type === 'breakdown' && <BreakdownPopup breakdown={popup.record} preset={{ vehicleId: id }} onClose={() => setPopup(null)} onSaved={reloadAll} />}
       {popup?.type === 'reading' && <ReadingPopup reading={popup.record} preset={{ vehicleId: id }} onClose={() => setPopup(null)} onSaved={reloadAll} />}
     </Page>
   );

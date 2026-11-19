@@ -18,6 +18,7 @@ const SOURCE_BADGE = {
   payroll: { label: 'Payroll', className: 'badge-green' },
   trip: { label: 'Trip', className: 'badge-blue' },
   diesel: { label: 'Pump Fill', className: 'badge-orange' },
+  breakdown: { label: 'Breakdown', className: 'badge-red' },
 };
 
 export default function Expenses() {
@@ -47,11 +48,12 @@ export default function Expenses() {
       }
       return;
     }
-    if (['inventory', 'payroll', 'trip'].includes(expense.source)) {
+    if (['inventory', 'payroll', 'trip', 'breakdown'].includes(expense.source)) {
       toast.info({
         inventory: 'This came from issuing store stock. Change it in Inventory.',
         payroll: 'This is a salary payment. Change it in Payroll.',
         trip: 'This was added on a trip. Change it in that trip.',
+        breakdown: 'This is a breakdown repair cost. Change it in Breakdowns.',
       }[expense.source]);
       return;
     }
@@ -128,7 +130,7 @@ export default function Expenses() {
                     <td className={TD}>
                       <div className="flex justify-end">
                         <RowAction title="Edit" icon={Pencil} onClick={() => handleEdit(expense)} />
-                        {!['inventory', 'payroll', 'trip', 'diesel'].includes(expense.source) && <RowAction title="Delete" icon={Trash2} tone="rose" onClick={() => handleDelete(expense)} />}
+                        {!['inventory', 'payroll', 'trip', 'diesel', 'breakdown'].includes(expense.source) && <RowAction title="Delete" icon={Trash2} tone="rose" onClick={() => handleDelete(expense)} />}
                       </div>
                     </td>
                   </tr>

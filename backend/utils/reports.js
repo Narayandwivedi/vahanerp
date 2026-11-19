@@ -1,5 +1,5 @@
 const {
-  User, Party, Vehicle, PendingChange, Trip, Contract, Payment, Expense, InventoryItem, InventoryTxn, Purchase, DieselEntry, Maintenance, Document, Employee,
+  User, Party, Vehicle, PendingChange, Trip, Contract, Payment, Expense, InventoryItem, InventoryTxn, Purchase, DieselEntry, Maintenance, Document, Employee, Breakdown,
 } = require("../models");
 const { mileageReport } = require("./mileage");
 const { contractAmount, contractSegments, dayNum, todayNum, round2, toNumber, idOf, DAY_MS } = require("./common");
@@ -139,7 +139,7 @@ const monthlyTrend = async (userId, months = 6) => {
 const partyLedger = async (userId, partyId, asOf = new Date()) => {
   const party = await Party.findOne({ _id: partyId, userId }).lean();
   if (!party) return null;
-  const [billedTrips, hireTrips, contracts, payments, purchases, purchaseBills, dieselFills, materialBuys] = await Promise.all([
+  const [billedTrips, hireTrips, contracts, payments, purchases, purchaseBills, dieselFills, materialBuys, repairs] = await Promise.all([
     Trip.find({ userId, partyId }).populate("vehicleId", "vehicleNo").lean(),
     Trip.find({ userId, hirePartyId: partyId, hireAmount: { $gt: 0 } }).populate("vehicleId", "vehicleNo").lean(),
     Contract.find({ userId, partyId }).populate("vehicleId", "vehicleNo").lean(),
@@ -148,6 +148,7 @@ const partyLedger = async (userId, partyId, asOf = new Date()) => {
     Purchase.find({ userId, partyId }).lean(),
     DieselEntry.find({ userId, partyId }).populate("vehicleId", "vehicleNo").lean(),
     Trip.find({ userId, materialBy: "me", materialSupplierId: partyId, materialCost: { $gt: 0 } }).populate("partyId", "name").lean(),
+    Breakdown.find({ userId, workshopPartyId: partyId, totalCost: { $gt: 0 } }).populate("vehicleId", "vehicleNo").lean(),
   ]);
 
   const rows = [];
@@ -186,7 +187,7 @@ const partyLedger = async (userId, partyId, asOf = new Date()) => {
         date: segment.to,
         kind: contract.direction === "give_out" ? "Monthly Rent (given)" : "Monthly Rent (hired)",
         ref: contract.contractNo,
-        details: `${contract.vehicleId?.vehicleNo || ""} · ${label}`,
+        details: `${contract.vehicleId?.vehicleNo || ""} · ${label}${segment.offDays ? ` · ${segment.offDays} day${segment.offDays > 1 ? "s" : ""} off (−₹${segment.offAmount})` : ""}`,
         debit: contract.direction === "give_out" ? segment.amount : 0,
         credit: contract.direction === "hire_in" ? segment.amount : 0,
       });
@@ -273,6 +274,30 @@ const partyLedger = async (userId, partyId, asOf = new Date()) => {
         ref: trip.tripNo,
         details: `Paid for ${trip.material || "material"} (${String(trip.materialCostMode || "cash").toUpperCase()})`,
         debit: toNumber(trip.materialCostPaid),
+        credit: 0,
+      });
+    }
+  });
+
+  // Breakdown repairs done by this workshop, and what was paid on the spot
+  repairs.forEach((repair) => {
+    const date = repair.resolvedDate || repair.date;
+    rows.push({
+      date,
+      kind: "Breakdown Repair",
+      ref: repair.breakdownNo,
+      vehicleNo: repair.vehicleId?.vehicleNo || "",
+      details: repair.reason,
+      debit: 0,
+      credit: toNumber(repair.totalCost),
+    });
+    if (toNumber(repair.paidAmount) > 0) {
+      rows.push({
+        date,
+        kind: "Paid",
+        ref: repair.breakdownNo,
+        details: `Paid for breakdown repair (${String(repair.mode || "cash").toUpperCase()})`,
+        debit: toNumber(repair.paidAmount),
         credit: 0,
       });
     }
